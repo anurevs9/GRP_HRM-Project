@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load formtags %}
+
+{% block title %}Create Training Session{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">Create Training Session</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Training Title</label>
+                            {{ form.title|addclass:"form-control" }}
+                            {% if form.title.errors %}
+                                <div class="invalid-feedback d-block">{{ form.title.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            {{ form.description|addclass:"form-control" }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="participants" class="form-label">Participants</label>
+                            {{ form.participants|addclass:"form-control" }}
+                            {% if form.participants.errors %}
+                                <div class="invalid-feedback d-block">{{ form.participants.errors }}</div>
+                            {% endif %}
+                        </div>
+                        {# **ADD THESE FIELDS:** #}
+                        <div class="mb-3">
+                            <label for="trainer" class="form-label">Trainer</label>
+                            {{ form.trainer|addclass:"form-control" }}  {# Render trainer field #}
+                            {% if form.trainer.errors %}
+                                <div class="invalid-feedback d-block">{{ form.trainer.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            {{ form.status|addclass:"form-control" }}  {# Render status field #}
+                            {% if form.status.errors %}
+                                <div class="invalid-feedback d-block">{{ form.status.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="start_date" class="form-label">Start Date & Time</label>
+                            {% load custom_filters %}
+                            {{ form.start_date|addclass_and_type:"form-control,datetime-local" }}
+                            {% if form.start_date.errors %}
+                                <div class="invalid-feedback d-block">{{ form.start_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="end_date" class="form-label">End Date & Time</label>
+                            {% load custom_filters %}
+                            {{ form.end_date|addclass_and_type:"form-control,datetime-local" }}
+                            {% if form.end_date.errors %}
+                                <div class="invalid-feedback d-block">{{ form.end_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="materials" class="form-label">Training Materials</label>
+                            {{ form.materials|addclass:"form-control" }}
+                            {% if form.materials.errors %}
+                                <div class="invalid-feedback d-block">{{ form.materials.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">Create Training</button>
+                    <a href="{% url 'core:training_list' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize datetime inputs
+    const dateInputs = document.querySelectorAll('input[type="datetime-local"]');
+    dateInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            validateDates();
+        });
+    });
+
+    function validateDates() {
+        const startDate = document.querySelector('input[name="start_date"]').value;
+        const endDate = document.querySelector('input[name="end_date"]').value;
+
+        if (startDate && endDate && startDate > endDate) {
+            alert('End date cannot be earlier than start date');
+            document.querySelector('input[name="end_date"]').value = '';
+        }
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Payroll{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% csrf_token %}  <!-- Add the CSRF token here -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-4">Payroll Management</h1>
+        <a href="{% url 'core:payroll_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> payroll
+        </a>
+    </div>
+
+    <div class="row">
+        {% for payroll in payrolls %}
+        <div class="col-md-6 mb-4">
+            <div class="card payroll-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="card-title">{{ payroll.employee.user.get_full_name }}</h5>
+                            <p class="text-muted mb-0">{{ payroll.employee.employee_id }}</p>
+                        </div>
+                        <div>
+                            <span class="payment-status {{ payroll.payment_status|yesno:'paid,pending' }}"></span>
+                            {{ payroll.payment_status|yesno:"Paid,Pending" }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Period</small>
+                            {{ payroll.period_start|date:"M d" }} - {{ payroll.period_end|date:"M d, Y" }}
+                        </div>
+                        <div class="col-6 text-end">
+                            <small class="text-muted d-block">Payment Date</small>
+                            {{ payroll.payment_date|date:"M d, Y" }}
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted d-block">Basic Salary</small>
+                                <span class="salary-amount">${{ payroll.basic_salary }}</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted d-block">Net Salary</small>
+                                <span class="salary-amount">${{ payroll.net_salary }}</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted d-block">Overtime</small>
+                                <span class="salary-amount">${{ payroll.overtime_hours|multiply:payroll.overtime_rate }}</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted d-block">Deductions</small>
+                                <span class="salary-amount">-${{ payroll.deductions }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                   <div class="mt-3">
+                        <a href="{% url 'core:payroll_detail' payroll.id %}" class="btn btn-outline-primary">
+                            View Details
+                        </a>
+                        {% if not payroll.payment_status and request.user.employee.role.name in 'settings.PAYROLL_ADMIN_ROLES' %}
+                        <button id="process-payment-btn-{{ payroll.id }}" class="btn btn-success"
+                            onclick="processPayment({{ payroll.id }})">
+                            Process Payment
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <i class="bi bi-cash-stack fs-1 text-muted"></i>
+            <p class="text-muted mt-3">No payroll records found.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+    // In your payroll_list.html, inside the <script> tag:
+    document.addEventListener('DOMContentLoaded', function () {
+
+  // Function to update the UI based on payment status
+  function updatePaymentStatus(payrollId, status) {
+      const statusSpan = document.getElementById(`payment-status-${payrollId}`);
+      const paymentButton = document.getElementById(`process-payment-btn-${payrollId}`); //Get button
+      if (statusSpan) {
+          statusSpan.textContent = status ? 'Paid' : 'Pending';
+          statusSpan.className = status ? 'payment-status paid' : 'payment-status pending';
+      }
+      if (paymentButton) {
+          if (status) {
+              paymentButton.style.display = 'none';
+          }
+      }
+  }
+
+  // Function to check payment status
+  function checkPaymentStatus(payrollId) {
+      fetch(`/payroll/${payrollId}/status/`)
+          .then(response => {
+            if(!response.ok){
+              throw new Error("Not 2xx response")
+            }
+            return response.json()
+          })
+          .then(data => {
+            updatePaymentStatus(payrollId, data.payment_status)
+          })
+          .catch(error => {
+              console.error('Error:', error);
+          });
+  }
+  // Call the status check and updater for all payroll items
+  {% for payroll in payrolls %}
+      checkPaymentStatus({{ payroll.id }});
+        if ("{{ payroll.payment_status|yesno:'false,true,false' }}" === 'false' ) {
+            setInterval(() => checkPaymentStatus({{ payroll.id }}), 5000);
+        }
+  {% endfor %}
+
+
+
+  window.processPayment = function (payrollId) {
+      fetch(`/payroll/${payrollId}/process/`, {
+          method: 'POST',
+          headers: {
+              'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+              'Content-Type': 'application/json',
+          },
+      })
+          .then(response => {
+              if (!response.ok) {
+                    // This is where your original error was most likely happening
+                  throw new Error(`HTTP error! status: ${response.status}`); // Improve error message
+              }
+              return response.json();
+          })
+          .then(data => {
+              if (data.status === 'success') {
+                  var options = {
+                      key: "{{ razorpay_key_id|safe }}",
+                      amount: data.amount,
+                      currency: data.currency,
+                      name: "Your Company Name",
+                      description: "Payroll Payment",
+                      order_id: data.order_id,
+                      handler: function (response) {
+
+                          checkPaymentStatus(payrollId);
+
+                      },
+                      prefill: {
+                          name: data.employee_name,
+                          email: data.employee_email
+                      },
+                      theme: {
+                          color: "#F37254"
+                      }
+                  };
+                  var rzp1 = new Razorpay(options);
+                  rzp1.open();
+
+
+                  rzp1.on('payment.failed', function (response) {
+                      alert("Payment Failed");
+                  });
+              } else {
+                  alert('Error: ' + data.message); // Show the error message from the server
+              }
+          })
+          .catch(error => {
+              console.error('Error:', error);
+              alert("An error occurred while processing the payment.");
+          });
+  };
+});
+</script>
+{% endblock %}

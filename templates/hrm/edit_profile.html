@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-4">  {# Added mt-4 for some top margin #}
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Edit Profile</h4>  {# Simpler header #}
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="row mb-3">
+                            <div class="col-md-3 text-center">
+                                {# Display profile picture if it exists #}
+                                {% if request.user.employee.profile_picture %}
+                                    <img src="{{ request.user.employee.profile_picture.url }}"
+                                         alt="Profile Picture"
+                                         class="img-fluid rounded-circle"
+                                         style="width: 150px; height: 150px; object-fit: cover;">
+                                {% else %}
+                                     <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mb-3"
+                                         style="width: 150px; height: 150px; margin: 0 auto;">
+                                        <i class="bi bi-person-circle fs-1 text-secondary"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-9">
+                                <div class="row"> {# Use a loop #}
+                                  {% for field in form %}
+                                    <div class="mb-3 col-md-6">
+                                        <label for="{{ field.id_for_label }}" class="form-label">
+                                            {{ field.label }}
+                                            {% if field.field.required %}
+                                                <span class="text-danger">*</span> <span class="text-muted">(Required)</span>
+                                            {% endif %}
+                                        </label>
+                                        {{ field }}
+                                        {% if field.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ field.errors }}
+                                            </div>
+                                        {% endif %}
+                                        {% if field.help_text %}
+                                            <small class="form-text text-muted">{{ field.help_text }}</small>
+                                        {% endif %}
+                                    </div>
+                                  {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Save Changes
+                            </button>
+                            <a href="{% url 'core:dashboard' %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

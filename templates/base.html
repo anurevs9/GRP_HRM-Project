@@ -1,0 +1,158 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Epic HR - {% block title %}{% endblock %}</title>
+  <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <div class="d-flex">
+    {% if user.is_authenticated %}
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="brand">
+          <i class="bi bi-building me-2"></i>
+          GRP HRMS
+        </div>
+        <nav class="nav flex-column">
+          <!-- Dashboard -->
+          <a href="{% url 'core:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <i class="bi bi-speedometer2"></i>
+            <span>Dashboard</span>
+          </a>
+          <!-- Users -->
+          {% if request.user.employee.role.name in 'ADMIN,MANAGER,TEAM_LEADER' %}
+            <a href="{% url 'core:employee_list' %}" class="nav-link {% if 'employee' in request.path %}active{% endif %}">
+              <i class="bi bi-people"></i>
+              <span>Users</span>
+            </a>
+          {% endif %}
+          <!-- Holidays -->
+          <a href="{% url 'core:leave_request' %}" class="nav-link {% if 'leave' in request.path %}active{% endif %}">
+            <i class="bi bi-calendar-check"></i>
+            <span>Holidays</span>
+          </a>
+          <!-- Events -->
+          <a href="{% url 'core:training_list' %}" class="nav-link {% if 'training' in request.path %}active{% endif %}">
+            <i class="bi bi-calendar-event"></i>
+            <span>Events</span>
+          </a>
+          <!-- Payroll -->
+          <a href="{% url 'core:payroll_list' %}" class="nav-link {% if 'payroll' in request.path %}active{% endif %}">
+            <i class="bi bi-cash-stack"></i>
+            <span>Payroll</span>
+          </a>
+          <!-- Accounts -->
+          {% if request.user.employee.role.name == 'ADMIN' %}
+            <a href="{% url 'core:department_list' %}" class="nav-link {% if 'department' in request.path %}active{% endif %}">
+              <i class="bi bi-diagram-3"></i>
+              <span>Departments</span>
+            </a>
+          {% endif %}
+          <!-- Recruitment -->
+          {% if request.user.employee.role.name == 'ADMIN' %}
+            <a href="{% url 'core:recruitment_list' %}" class="nav-link {% if 'recruitment' in request.path %}active{% endif %}">
+              <i class="bi bi-diagram-3"></i>
+              <span>Recruitment</span>
+            </a>
+          {% endif %}
+          <!-- Attendance -->
+          <a href="{% url 'core:attendance_mark' %}" class="nav-link {% if 'attendance' in request.path %}active{% endif %}">
+            <i class="bi bi-file-text"></i>
+            <span>Attendance</span>
+          </a>
+          <!-- Reports -->
+          <a href="{% url 'core:reports' %}" class="nav-link {% if 'reports' in request.path %}active{% endif %}">
+            <i class="bi bi-bar-chart"></i>
+            <span>Reports</span>
+          </a>
+        </nav>
+      </div>
+    {% endif %}
+    <!-- Main Content Area -->
+    <div class="flex-grow-1">
+      {% if user.is_authenticated %}
+        <!-- Top Navbar -->
+        <nav class="navbar navbar-expand-lg">
+          <div class="container-fluid">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+              <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+              <div class="d-flex align-items-center ms-auto">
+                <div class="dropdown me-3">
+                  <button class="btn btn-link text-dark" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-bell fs-5"></i>
+                  </button>
+                  <div class="dropdown-menu dropdown-menu-end">
+                    <div class="dropdown-header">Notifications</div>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="#">No new notifications</a>
+                  </div>
+                </div>
+                <div class="dropdown">
+                  <button class="btn d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+                    {% if request.user.employee.profile_picture %}
+                      <img src="{{ request.user.employee.profile_picture.url }}" alt="Profile"
+                           class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;">
+                    {% else %}
+                      <i class="bi bi-person-circle fs-5"></i>
+                    {% endif %}
+                    <span>{{ request.user.get_full_name }}</span> {# **DISPLAY USER NAME HERE!** #}
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <a class="dropdown-item" href="{% url 'core:edit_profile' %}">
+                        <i class="bi bi-person me-2"></i>Edit Profile
+                      </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <a class="dropdown-item" href="{% url 'core:logout' %}">
+                        <i class="bi bi-box-arrow-right me-2"></i>Logout
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+      {% endif %}
+      <div class="main-content">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+        <div class="inner-content-wrapper">  <!-- ADD THIS INNER WRAPPER -->
+            {% block content %}
+            {% endblock %}
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+  <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+  <script>
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+    // Mobile sidebar toggle
+    document.querySelector('.navbar-toggler')?.addEventListener('click', function() {
+      document.querySelector('.sidebar')?.classList.toggle('show');
+    });
+  </script>
+    {% block extra_js %}
+    {% endblock %}
+</body>
+</html>

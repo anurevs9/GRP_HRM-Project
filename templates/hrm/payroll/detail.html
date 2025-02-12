@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Payroll Detail{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Payroll Details</h4>
+                        <a href="{% url 'core:payroll_list' %}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-arrow-left"> Back to List</i>
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- ... (Employee and Payment Information sections - NO changes here) ... -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Employee Information</h5>
+                            <p class="mb-1">Name: {{ payroll.employee.user.get_full_name }}</p>
+                            <p class="mb-1">ID: {{ payroll.employee.employee_id }}</p>
+                            <p class="mb-1">Department: {{ payroll.employee.department.name }}</p>
+                            <p class="mb-1">Position: {{ payroll.employee.role.name }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Payment Information</h5>
+                            <p class="mb-1">Period: {{ payroll.period_start|date }} - {{ payroll.period_end|date }}</p>
+                            <p class="mb-1">Payment Date: {{ payroll.payment_date|date }}</p>
+                            <p class="mb-1">
+                                Status:
+                                <span id="payment-status-badge" class="badge {% if payroll.payment_status %}bg-success{% else %}bg-warning{% endif %}">
+                                    {{ payroll.payment_status|yesno:"Paid,Pending" }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <!-- ... (Table content - NO changes here) ... -->
+                                <tr>
+                                    <th>Description</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Basic Salary</td>
+                                    <td class="text-end">${{ payroll.basic_salary }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Overtime ({{ payroll.overtime_hours }} hours @ ${{ payroll.overtime_rate }}/hour)</td>
+                                    <td class="text-end">${{ payroll.overtime_hours|multiply:payroll.overtime_rate }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Bonuses</td>
+                                    <td class="text-end">${{ payroll.bonuses }}</td>
+                                </tr>
+                                <tr class="table-danger">
+                                    <td>Deductions</td>
+                                    <td class="text-end">-${{ payroll.deductions }}</td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <th>Net Salary</th>
+                                    <th class="text-end">${{ payroll.net_salary }}</th>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% csrf_token %}
+
+                    <!-- REMOVED the button from here -->
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let payrollId = {{ payroll.id }};
+    let paymentStatusBadge = document.getElementById('payment-status-badge');
+
+    function updatePaymentStatus(status) {
+        if (status) {
+            paymentStatusBadge.classList.remove('bg-warning');
+            paymentStatusBadge.classList.add('bg-success');
+            paymentStatusBadge.textContent = 'Paid';
+        } // No else needed
+    }
+
+    function checkPaymentStatus() {
+        fetch(`/payroll/${payrollId}/status/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                updatePaymentStatus(data.payment_status);
+            })
+            .catch(error => {
+                console.error('Error checking payment status:', error);
+            });
+    }
+
+    // Initial check when the page loads
+    checkPaymentStatus();
+
+    // Only set up the interval *if* the initial status is unpaid.
+    if ("{{ payroll.payment_status|yesno:'false,true,false' }}" === 'false' ) {
+      setInterval(checkPaymentStatus, 5000);  // Check every 5 seconds (adjust as needed)
+    }
+
+});
+</script>
+{% endblock %}

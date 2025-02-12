@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ report_title }}{% endblock %}
+{% block content %}
+<h1>{{ report_title }}</h1>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Employee</th>
+            <th>Review Period</th>
+            <th>Rating</th>
+            <th>Feedback</th>
+            <th>Reviewed By</th>
+            <th>Review Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for performance in performances %}
+        <tr>
+            <td>{{ performance.employee.user.get_full_name }}</td>
+            <td>{{ performance.review_period }}</td>
+            <td>{{ performance.rating }}</td>
+            <td>{{ performance.feedback }}</td>
+            <td>{{ performance.reviewed_by.get_full_name }}</td>
+            <td>{{ performance.review_date }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Department List{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">Department List</h1>
+
+    <div class="mb-3 d-flex justify-content-between align-items-center">  {# Use d-flex and justify-content-between #}
+        <form class="d-inline-block" method="get">  {# Keep search form on the left #}
+            <input class="form-control" type="search" placeholder="Search departments..." name="search" value="{{ search_query }}">
+        </form>
+        <a href="{% url 'core:department_create' %}" class="btn btn-primary">Create Department</a> {# Button on the right #}
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Sr. No</th>
+                            <th>Department Name</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for department in departments %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ department.name }}</td>
+                            <td>{{ department.description }}</td>
+                            <td>
+                                {% if department.status %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'core:department_edit' pk=department.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                                {% if department.status %}
+                                    <form method="post" action="{% url 'core:department_deactivate' pk=department.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to deactivate {{ department.name }}? Employees in this department may be affected.');">Deactivate</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No departments found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

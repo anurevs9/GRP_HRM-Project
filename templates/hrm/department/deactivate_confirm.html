@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirm Department Deactivation{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">Confirm Deactivation</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <p>Are you sure you want to deactivate the department: <strong>{{ department.name }}</strong>?</p>
+            <p class="text-warning">Deactivating this department will make it inactive in the system.</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Confirm Deactivate</button>
+                <a href="{% url 'core:department_list' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<h1>Reports</h1>
+<ul>
+    {% for report in report_types %}
+    <li><a href="{{ report.url }}">{{ report.name }}</a></li>
+    {% endfor %}
+</ul>
+{% endblock %}

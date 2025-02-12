@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Apply for {{ recruitment.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Apply for {{ recruitment.title }}</h1>
+
+    <form method="post" enctype="multipart/form-data">  <!-- enctype is crucial for file uploads -->
+        {% csrf_token %}
+        {{ form.position.as_hidden }} {# Hide the position field #}
+        {{ form.non_field_errors }}
+        <div class="mb-3">
+            <label for="{{ form.name.id_for_label }}" class="form-label">Full Name</label>
+            {{ form.name }}
+            {{ form.name.errors }}
+        </div>
+       <div class="mb-3">
+            <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+            {{ form.email }}
+            {{ form.email.errors }}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.phone.id_for_label }}" class="form-label">Phone</label>
+            {{ form.phone }}
+            {{ form.phone.errors }}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.resume.id_for_label }}" class="form-label">Resume</label>
+            {{ form.resume }}
+            {{ form.resume.errors }}
+        </div>
+         <div class="mb-3">
+            <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+            {{ form.notes }}
+            {{ form.notes.errors }}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Submit Application</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+<!-- hrm/recruitment/detail.html -->
+{% extends 'base.html' %}
+{% block content %}
+
+<h1>{{recruitment.title}}</h1>
+<p><strong>Department:</strong> {{ recruitment.department }}</p>
+<p><strong>Deadline:</strong> {{ recruitment.deadline }}</p>
+<p><strong>Status:</strong> {{ recruitment.get_status_display}}</p>
+<p><strong>Description:</strong> {{ recruitment.description }}</p>
+<p><strong>Requirements:</strong> {{ recruitment.requirements }}</p>
+<a href="{% url 'core:apply_for_job' recruitment.id %}" class="btn btn-primary">Apply Now</a>
+<a href="{% url 'core:recruitment_list' %}" class="btn btn-secondary">Back</a>
+
+{% endblock %}

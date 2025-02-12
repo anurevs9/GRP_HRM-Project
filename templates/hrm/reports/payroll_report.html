@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+{% block title %}{{ report_title }}{% endblock %}
+{% block content %}
+<h1>{{ report_title }}</h1>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Employee</th>
+            <th>Period Start</th>
+            <th>Period End</th>
+            <th>Basic Salary</th>
+            <th>Overtime Pay</th>
+            <th>Bonuses</th>
+            <th>Deductions</th>
+            <th>Net Salary</th>
+            <th>Payment Date</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for payroll in payrolls %}
+        <tr>
+            <td>{{ payroll.employee.user.get_full_name }}</td>
+            <td>{{ payroll.period_start }}</td>
+            <td>{{ payroll.period_end }}</td>
+            <td>{{ payroll.basic_salary }}</td>
+            <td>{{ payroll.overtime_hours|floatformat:2 }} × {{ payroll.overtime_rate|floatformat:2 }} = {{ payroll.overtime_hours|mul:payroll.overtime_rate|floatformat:2 }}</td>
+            <td>{{ payroll.bonuses }}</td>
+            <td>{{ payroll.deductions }}</td>
+            <td>{{ payroll.net_salary }}</td>
+            <td>{{ payroll.payment_date }}</td>
+            <td>{{ payroll.get_payment_status_display }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

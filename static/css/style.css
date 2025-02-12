@@ -1,0 +1,205 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --primary-color: #006d77;
+  --secondary-color: #83c5be;
+  --dark-color: #001219;
+  --light-color: #edf6f9; /* Changed to a slightly lighter tone if needed */
+  --accent-color: #e29578;
+  --sidebar-width: 240px;
+  --header-height: 60px;
+  --info-color: #17a2b8;
+}
+
+/* Global Styles */
+body {
+  background-color: var(--secondary-color);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-width);
+  min-height: 100vh;
+  background: var(--dark-color);
+  color: white;
+  padding: 1rem;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+}
+
+.sidebar .brand {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.sidebar .nav-link {
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.sidebar .nav-link.active,
+.sidebar .nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+/* Main Content */
+.main-content {
+  margin-left: var(--sidebar-width);  <- Keep margin-left for sidebar layout
+  padding: 0; /* Padding can be 0 or adjusted, as needed */
+  background: var(--secondary-color); /* Background transparent */
+  min-height: 100vh;  /* Keep min-height if needed for layout */
+  display: flex; /* **IMPORTANT: Ensure display: flex is here** */
+  flex-direction: column; /* **IMPORTANT: Ensure flex-direction: column is here** */
+}
+
+.inner-content-wrapper {
+  padding: 1.5rem; /* Apply padding to this inner element instead of .main-content */
+}
+
+
+/* Top Navbar */
+.navbar {
+  background: #b5b6b7;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .sidebar {
+    left: -240px;
+    transition: left 0.3s ease-in-out;
+    position: absolute;
+  }
+  .sidebar.show {
+    left: 0;
+  }
+  .main-content {
+    margin-left: 0;
+    padding: 1rem;
+  }
+}
+
+/* Cards and Common Components - Updated for Stat Cards */
+.card {
+  border: none;
+  border-radius: 12px; /* Slightly more rounded corners */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08); /* Softer, slightly larger shadow */
+  background: #ffffff; /* White card background */
+  padding: 2.5rem; /* Increased padding */
+}
+
+.card-body {
+  padding: 0; /* Remove default card-body padding to control spacing better */
+}
+
+.card-title { /* For a potential Login title within the card */
+  font-size: 1.75rem; /* Larger title */
+  font-weight: bold;
+  color: var(--dark-color);
+  margin-bottom: 1.5rem;
+  text-align: center; /* Center the title */
+}
+
+/* Optional: Style for the count text */
+.stat-count {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--primary-color);
+  margin: 0;
+}
+
+
+.stat-card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+/* Tables */
+.table th {
+  font-weight: 500;
+  color: #6c757d;
+  border-bottom: 1px solid #dee2e6;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+}
+
+.table td {
+  vertical-align: middle;
+  color: var(--dark-color);
+}
+
+/* Buttons */
+.btn {
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+/* Badges */
+.badge {
+  padding: 0.5em 0.75em;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+.form-label {
+  font-weight: 500;
+  color: var(--dark-color);
+  margin-bottom: 0.5rem; /* Add a bit of space below labels */
+  display: block; /* Ensure labels are full width for better alignment */
+}
+
+.form-control {
+  border-radius: 8px; /* Slightly more rounded input fields */
+  border: 1px solid #ced4da; /* Standard Bootstrap input border color */
+  padding: 0.75rem 1rem; /* Increased padding for input fields */
+  font-size: 1rem; /* Slightly larger font size in inputs */
+}
+
+.form-control:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(0, 109, 119, 0.25); /* Consistent focus style */
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  padding: 0.8rem 1.5rem; /* Slightly larger button padding */
+  font-size: 1.1rem; /* Slightly larger button text */
+  border-radius: 8px; /* Rounded button corners */
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+
+/* Additional Utility Classes (if needed) */
+/* Adjust as necessary for your project */

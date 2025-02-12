@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load formtags %}
+
+{% block title %}Leave Request{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">Submit Leave Request</h1>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="leave_type" class="form-label">Leave Type</label>
+                            {{ form.leave_type|addclass:"form-control" }}
+                            {% if form.leave_type.errors %}
+                                <div class="invalid-feedback d-block">{{ form.leave_type.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            {{ form.start_date|addclass_and_type:"form-control,date" }}
+                            {% if form.start_date.errors %}
+                                <div class="invalid-feedback d-block">{{ form.start_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="end_date" class="form-label">End Date</label>
+                            {{ form.end_date|addclass_and_type:"form-control,date" }}
+                            {% if form.end_date.errors %}
+                                <div class="invalid-feedback d-block">{{ form.end_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="reason" class="form-label">Reason</label>
+                            {{ form.reason|addclass:"form-control" }}
+                            {% if form.reason.errors %}
+                                <div class="invalid-feedback d-block">{{ form.reason.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Request</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Leave History</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for leave in leave_history %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ leave.get_leave_type_display }}</h6>
+                                <small class="text-muted">{{ leave.applied_on|date }}</small>
+                            </div>
+                            <p class="mb-1">{{ leave.start_date|date }} to {{ leave.end_date|date }}</p>
+                            <small class="text-muted">Status: {{ leave.get_status_display }}</small>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted text-center my-3">No leave history found.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize date inputs
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    dateInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            validateDates();
+        });
+    });
+
+    function validateDates() {
+        const startDate = document.querySelector('input[name="start_date"]').value;
+        const endDate = document.querySelector('input[name="end_date"]').value;
+
+        if (startDate && endDate && startDate > endDate) {
+            alert('End date cannot be earlier than start date');
+            document.querySelector('input[name="end_date"]').value = '';
+        }
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

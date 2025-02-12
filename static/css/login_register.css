@@ -1,0 +1,388 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap'); /*!* --- login_register.css --- *!*/
+
+/*!* --- Page-Specific Header Styles --- *!*/
+
+/*.page-header {*/
+/*    !* background-color: var(--primary-color);  <- REMOVE default background color *!*/
+/*    color: white; !* Keep text color as white (or your desired color) *!*/
+/*    padding: 1rem; !* Use Bootstrap padding classes (e.g., py-3, px-4) if needed *!*/
+/*    text-align: center; !* Use Bootstrap text-center class *!*/
+/*    width: 100%;*/
+/*    transition: background-color 0.3s ease; !* Smooth transition for hover effect *!*/
+/*}*/
+/*!*added page-header-content to style h1*!*/
+/*.page-header .page-header-content h1 {*/
+/*    font-size: 1.75rem;*/
+/*    font-weight: bold;*/
+/*    margin: 0;*/
+/*}*/
+
+/*!* Hover Effect *!*/
+/*.header-hover {*/
+/*    background-color: transparent; !* Default transparent background *!*/
+/*}*/
+
+/*.header-hover:hover {*/
+/*    background-color: rgba(0, 109, 119, 0.8); !* Semi-transparent background on hover (adjust color and opacity) *!*/
+/*}*/
+
+
+/*.login-image-section, .register-image-section,*/
+/*.login-form-section, .register-form-section {*/
+/*    display: flex; !* Ensure all sections are Flex containers *!*/
+/*    flex-direction: column; !* Stack content vertically within each section *!*/
+/*    justify-content: center; !* Vertically center content *!*/
+/*    align-items: stretch; !* Stretch items to fill container height *!*/
+/*    padding: 0;  !* Remove padding from sections to avoid extra gaps *!*/
+/*    overflow: hidden; !* Handle image overflow *!*/
+/*    !* No background-color here, set on individual elements if needed *!*/
+/*}*/
+/*.login-image-section, .register-image-section{*/
+/*    background-color: var(--secondary-color);*/
+/*}*/
+
+/*!* --- Image Section Styling --- *!*/
+
+/*.login-image-section img, .register-image-section img {*/
+/*    max-width: 100%;*/
+/*    height: auto;*/
+/*    display: block;*/
+/*    border-radius: 12px;*/
+/*}*/
+/*!* --- Card Styling --- *!*/
+/*.card {*/
+/*    height: 100%; !* **Make the card fill its container's height** *!*/
+/*    display: flex; !* Use Flexbox for card content *!*/
+/*    flex-direction: column; !* Stack card content vertically *!*/
+/*    border-radius: 12px; !* Add rounded corners to the card *!*/
+/*    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);*/
+/*}*/
+
+/*.card-body {*/
+/*    flex-grow: 1; !* **Allow card-body to take up remaining space** *!*/
+/*    display: flex; !* Use Flexbox for card-body content *!*/
+/*    flex-direction: column; !* Stack card-body content vertically *!*/
+/*    justify-content: space-between;  !* Distribute space within card-body *!*/
+/*    padding: 1.5rem; !* Add padding to card-body *!*/
+
+/*}*/
+
+/*.card-title {*/
+/*    margin-bottom: 1rem; !* Add some margin below the title *!*/
+/*}*/
+
+/*!* Adjust form spacing *!*/
+/*.form-group {*/
+/*    margin-bottom: 1rem; !* Add margin between form groups *!*/
+/*}*/
+/*.row{*/
+/*    --bs-gutter-x: 0rem; !* Remove Bootstrap's default horizontal gutter *!*/
+
+/*}*/
+
+
+/*!* Responsive Adjustments (if needed) *!*/
+/*@media (max-width: 768px) {*/
+
+/*    .login-image-section, .register-image-section{*/
+/*        min-height: auto;*/
+/*    }*/
+/*    .login-form-section{*/
+/*        padding-top:1rem;*/
+/*    }*/
+/*}*/
+
+
+/* Google Font Link */
+/* Basic Reset and Body Styling (Bootstrap will handle many defaults) */
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #7d2ae8; /* You can customize background color */
+  padding: 30px;
+  font-family: "Poppins", sans-serif;
+}
+
+.container {
+  position: relative;
+  max-width: 850px;
+  width: 100%;
+  background: #fff;
+  padding: 40px 30px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  perspective: 2700px;
+  border-radius: 5px; /* Added border-radius for a softer look */
+}
+
+.cover {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  width: 50%;
+  z-index: 98;
+  transition: transform 1s ease; /* Changed to transform for better performance */
+  transform-origin: left;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  border-radius: 0 5px 5px 0; /* Match container border-radius */
+  /*overflow: hidden; !* Clip image corners *!*/
+}
+
+#flip:checked ~ .cover {
+  transform: rotateY(-180deg);
+}
+
+#flip:checked ~ .forms .login-form {
+  pointer-events: none;
+  opacity: 0; /* Fade out login form when flipped */
+}
+
+#flip:checked ~ .forms .signup-form {
+  pointer-events: auto; /* Enable signup form when flipped */
+  opacity: 1;      /* Fade in signup form when flipped */
+}
+
+
+.cover .front,
+.cover .back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.cover .back {
+  transform: rotateY(180deg);
+}
+
+.cover img {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  z-index: 10;
+}
+
+.cover .text {
+  position: absolute;
+  z-index: 10;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff; /* Default text color to white for better contrast */
+}
+
+.cover .text::before {
+  content: '';
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  opacity: 0.7; /* Slightly darker overlay */
+  background: #7d2ae8;
+  border-radius: 0 5px 5px 0; /* Match cover border-radius */
+}
+
+.cover .text .text-1,
+.cover .text .text-2 {
+  z-index: 20;
+  font-size: 24px; /* Slightly smaller font size */
+  font-weight: 600;
+  text-align: center;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Add text shadow for better readability */
+}
+
+.cover .text .text-2 {
+  font-size: 14px; /* Slightly smaller secondary text */
+  font-weight: 500;
+}
+
+.forms {
+  height: 100%;
+  width: 100%;
+  background: #fff;
+}
+
+.form-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form-content .login-form,
+.form-content .signup-form {
+  width: calc(100% / 2 - 25px);
+  padding: 0 20px; /* Add some padding to forms */
+}
+
+.signup-form {
+    opacity: 0;        /* Initially hide signup form */
+    pointer-events: none; /* Disable interactions with signup form */
+    transition: opacity 0.5s ease; /* Fade transition for signup form */
+}
+
+.forms .form-content .title {
+  position: relative;
+  font-size: 24px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 20px; /* Add margin below title */
+}
+
+.forms .form-content .title:before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -5px; /* Adjust position of underline */
+  height: 3px;
+  width: 25px;
+  background: #7d2ae8;
+}
+
+.forms .signup-form .title:before {
+  width: 20px;
+}
+
+.forms .form-content .input-boxes {
+  margin-top: 15px; /* Reduce top margin for input boxes */
+}
+
+.forms .form-content .input-box {
+  margin: 10px 0;
+  position: relative;
+}
+
+.form-content .input-box i {
+  position: absolute;
+  color: #7d2ae8;
+  font-size: 18px; /* Slightly larger icon */
+  top: 50%;
+  transform: translateY(-50%);
+  left: 10px; /* Adjust icon position */
+}
+
+
+.form-content .input-box .form-control { /* Targeting Bootstrap form-control */
+  height: 50px;
+  width: 100%;
+  outline: none;
+  border: none;
+  padding: 0 30px 0 50px; /* Adjusted padding-left to 50px */
+  font-size: 16px;
+  font-weight: 500;
+  border-bottom: 2px solid #ccc; /* Light grey bottom border */
+  transition: border-color 0.3s ease;
+}
+
+.form-content .input-box .form-control:focus {
+  border-color: #7d2ae8;
+  box-shadow: none; /* Remove default focus shadow */
+}
+
+
+.forms .form-content .text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #555; /* Darker grey text */
+  margin-top: 10px; /* Add margin to text links */
+}
+
+.forms .form-content .text a {
+  color: #7d2ae8;
+  text-decoration: none;
+}
+
+.forms .form-content .text a:hover {
+  text-decoration: underline;
+}
+
+.forms .form-content .button {
+  margin-top: 25px; /* Reduce margin for button */
+}
+
+.forms .form-content .button .btn { /* Targeting Bootstrap button */
+  width: 100%;
+  padding: 10px 20px;
+  font-size: 18px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.4s ease;
+}
+
+.forms .form-content .button .btn-primary { /* Style for primary button */
+  background: #7d2ae8;
+  color: #fff;
+}
+
+.forms .form-content .button .btn-primary:hover {
+  background: #5b13b9; /* Darker shade on hover */
+}
+
+
+.forms .form-content label {
+  color: #5b13b9;
+  cursor: pointer;
+}
+
+.forms .form-content label:hover {
+  text-decoration: underline;
+}
+
+.forms .form-content .login-text,
+.forms .form-content .sign-up-text {
+  text-align: center;
+  margin-top: 20px; /* Reduce margin for sign up/login text */
+}
+
+#flip {
+  display: none;
+}
+
+/* Responsive adjustments - using Bootstrap breakpoints is recommended for a full Bootstrap integration */
+@media (max-width: 768px) { /* Adjust breakpoint as needed */
+  .container {
+    max-width: 95%; /* Make container wider on smaller screens */
+    padding: 30px 20px; /* Reduce padding on smaller screens */
+  }
+
+  .cover {
+    display: none; /* Hide cover on smaller screens */
+  }
+
+  .form-content {
+    flex-direction: column; /* Stack forms vertically */
+  }
+
+  .form-content .login-form,
+  .form-content .signup-form {
+    width: 100%; /* Forms take full width on smaller screens */
+    padding: 0; /* Remove padding for forms on smaller screens */
+    margin-bottom: 20px; /* Add margin between stacked forms */
+  }
+
+  .signup-form {
+    display: block; /* Always show signup form in stacked view */
+    opacity: 1;     /* Make signup form visible */
+    pointer-events: auto; /* Enable signup form */
+  }
+
+  #flip:checked ~ .forms .signup-form {
+    display: block; /* Ensure signup is visible when checked (though cover is hidden now) */
+  }
+
+  #flip:checked ~ .forms .login-form {
+    display: none; /* Hide login when flipped (though not really flipping in stacked view) */
+  }
+
+  .forms .form-content .title {
+    text-align: center; /* Center titles in stacked view */
+  }
+}

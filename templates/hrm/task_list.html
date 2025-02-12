@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Tasks{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Tasks</h1>
+        {% if request.user.employee.role.name in 'ADMIN,MANAGER,TEAM_LEADER' %}
+        <a href="{% url 'core:add_task' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add Task
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Assigned To</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                        <tr>
+                            <td>{{ task.title }}</td>
+                            <td>{{ task.assigned_to.user.get_full_name }}</td>
+                            <td>{{ task.due_date }}</td>
+                            <td>
+                                <span class="badge {% if task.status == 'COMPLETED' %}bg-success{% elif task.status == 'IN_PROGRESS' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                    {{ task.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'core:update_task' task.id %}" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil"></i> Update
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No tasks found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

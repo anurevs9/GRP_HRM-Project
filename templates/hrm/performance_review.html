@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load formtags %}
+
+{% block title %}Performance Review{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Performance Review</h1>
+        <a href="{% url 'core:employee_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Employees
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Review for {{ employee.user.get_full_name }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.review_period.id_for_label }}" class="form-label">Review Period</label>
+                                {{ form.review_period }}
+                                {% if form.review_period.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.review_period.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.rating.id_for_label }}" class="form-label">Rating</label>
+                                {{ form.rating }}
+                                {% if form.rating.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.rating.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.feedback.id_for_label }}" class="form-label">Feedback</label>
+                            {{ form.feedback }}
+                            {% if form.feedback.errors %}
+                                <div class="invalid-feedback d-block">{{ form.feedback.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.goals.id_for_label }}" class="form-label">Goals & Expectations</label>
+                            {{ form.goals }}
+                            {% if form.goals.errors %}
+                                <div class="invalid-feedback d-block">{{ form.goals.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Submit Review
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Previous Reviews</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for review in previous_reviews %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ review.review_period }}</h6>
+                                <small class="text-muted">{{ review.review_date|date:"M d, Y" }}</small>
+                            </div>
+                            <div class="mb-2">
+                                <span class="badge bg-primary">Rating: {{ review.get_rating_display }}</span>
+                            </div>
+                            <p class="mb-1 text-muted small">{{ review.feedback|truncatewords:30 }}</p>
+                            <small>Reviewed by: {{ review.reviewed_by.get_full_name }}</small>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted text-center my-3">No previous reviews found</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

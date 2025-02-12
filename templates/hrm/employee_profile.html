@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Employee Profile{% endblock %}
+{% block content %}
+<div class="container">
+    <h2>Employee Profile</h2>
+    <p><strong>Name:</strong> {{ employee.user.get_full_name }}</p>
+    <p><strong>Department:</strong> {{ employee.department.name }}</p>
+    <!-- Other employee details -->
+
+    <h3>Trainings as Trainer</h3>
+    {% if trainer_trainings %}
+    <ul>
+        {% for training in trainer_trainings %}
+        <li>{{ training.title }} - Start Date: {{ training.start_date|date:"M d, Y" }}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No trainings as trainer.</p>
+    {% endif %}
+
+    <h3>Trainings as Participant</h3>
+    {% if participant_trainings %}
+    <ul>
+        {% for training in participant_trainings %}
+        <li>{{ training.title }} - Start Date: {{ training.start_date|date:"M d, Y" }}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No trainings as participant.</p>
+    {% endif %}
+</div>
+{% endblock %}

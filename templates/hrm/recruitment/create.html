@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load formtags %}
+
+{% block title %}Post New Position{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">Post New Position</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Position Title</label>
+                            {{ form.title|addclass:"form-control" }}
+                            {% if form.title.errors %}
+                                <div class="text-danger">
+                                    {{ form.title.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="department" class="form-label">Department</label>
+                            {{ form.department|addclass:"form-control" }}
+                            {% if form.department.errors %}
+                                <div class="text-danger">
+                                    {{ form.department.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="positions" class="form-label">Number of Positions</label>
+                            {{ form.positions|addclass:"form-control" }}
+                            {% if form.positions.errors %}
+                                <div class="text-danger">
+                                    {{ form.positions.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="deadline" class="form-label">Application Deadline</label>
+                            {{ form.deadline|addclass:"form-control" }}
+                            {% if form.deadline.errors %}
+                                <div class="text-danger">
+                                    {{ form.deadline.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                           <label for="status" class="form-label">Status</label>
+                           {{ form.status|addclass:"form-control" }}
+                           {% if form.status.errors %}
+                               <div class="text-danger">
+                                    {{ form.status.errors }}
+                               </div>
+                           {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Job Description</label>
+                            {{ form.description|addclass:"form-control" }}
+                            {% if form.description.errors %}
+                                <div class="text-danger">
+                                    {{ form.description.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="requirements" class="form-label">Requirements</label>
+                            {{ form.requirements|addclass:"form-control" }}
+                            {% if form.requirements.errors %}
+                                <div class="text-danger">
+                                    {{ form.requirements.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">Post Position</button>
+                    <a href="{% url 'core:recruitment_list' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mt-3">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

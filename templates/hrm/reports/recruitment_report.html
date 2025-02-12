@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ report_title }}{% endblock %}
+{% block content %}
+<h1>{{ report_title }}</h1>
+<h3>Open Positions</h3>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Department</th>
+            <th>Status</th>
+            <th>Positions</th>
+            <th>Deadline</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for recruitment in recruitments %}
+        <tr>
+            <td>{{ recruitment.title }}</td>
+            <td>{{ recruitment.department.name }}</td>
+            <td>{{ recruitment.get_status_display }}</td>
+            <td>{{ recruitment.positions }}</td>
+            <td>{{ recruitment.deadline }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h3>Candidates</h3>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Position</th>
+            <th>Stage</th>
+            <th>Applied On</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for candidate in candidates %}
+        <tr>
+            <td>{{ candidate.name }}</td>
+            <td>{{ candidate.email }}</td>
+            <td>{{ candidate.phone }}</td>
+            <td>{{ candidate.position.title }}</td>
+            <td>{{ candidate.get_stage_display }}</td>
+            <td>{{ candidate.applied_date }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

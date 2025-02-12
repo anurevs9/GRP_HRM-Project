@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Complete Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-4">  {# Added mt-4 for some top margin #}
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Complete Your Profile</h4>  {# Simpler header #}
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="row">
+                            {% for field in form %}
+                                <div class="mb-3 col-md-6"> {# Use Bootstrap grid and margin #}
+                                     <label for="{{ field.id_for_label }}" class="form-label">
+                                        {{ field.label }}
+                                        {% if field.field.required %}
+                                            <span class="text-danger">*</span><span class="text-muted"> (Required)</span>
+                                        {% endif %}
+                                    </label>
+                                    {{ field }}  {# Let Django render the field, with widgets #}
+                                    {% if field.errors %}
+                                        <div class="invalid-feedback d-block">  {# Use d-block for proper display #}
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endif %}
+                                    {% if field.help_text %}
+                                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="text-center"> {# Center the button #}
+                            <button type="submit" class="btn btn-primary">Complete Profile</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

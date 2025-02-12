@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Recruitment{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Open Positions</h1>
+        <a href="{% url 'core:recruitment_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Post New Position
+        </a>
+    </div>
+
+    <div class="row">
+        {% for position in recruitments %}
+        <div class="col-md-4 mb-4">
+            <div class="card position-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="card-title">{{ position.title }}</h5>
+                        <span class="position-status {{ position.status|lower }}">
+                            {{ position.get_status_display }}
+                        </span>
+                    </div>
+                    <p class="card-text text-muted mb-2">{{ position.department.name }}</p>
+                    <p class="card-text">{{ position.description|truncatewords:30 }}</p>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-calendar"></i> Deadline: {{ position.deadline|date:"M d, Y" }}
+                        </small>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{% url 'core:candidate_list' position.id %}" class="btn btn-outline-primary btn-sm">
+                            View Candidates ({{ position.candidate_set.count }})
+                        </a>
+                        {% if position.status == 'OPEN' %}
+                        <button class="btn btn-outline-danger btn-sm" onclick="closePosition({{ position.id }})">
+                            Close Position
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <i class="bi bi-clipboard-x fs-1 text-muted"></i>
+            <p class="text-muted mt-3">No open positions found.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load formtags %}
+
+{% block title %}Update Task{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">Update Task - {{ task.title }}</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="title" class="form-label">Title</label>
+                    {{ form.title|addclass:"form-control" }}
+                    {% if form.title.errors %}
+                        <div class="text-danger">{{ form.title.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    {{ form.description|addclass:"form-control" }}
+                    {% if form.description.errors %}
+                        <div class="text-danger">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label for="assigned_to" class="form-label">Assigned To</label>
+                    {{ form.assigned_to|addclass:"form-control" }}
+                    {% if form.assigned_to.errors %}
+                        <div class="text-danger">{{ form.assigned_to.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label for="due_date" class="form-label">Due Date</label>
+                    {{ form.due_date|addclass:"form-control" }}
+                    {% if form.due_date.errors %}
+                        <div class="text-danger">{{ form.due_date.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label for="status" class="form-label">Status</label>
+                    {{ form.status|addclass:"form-control" }}
+                    {% if form.status.errors %}
+                        <div class="text-danger">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">Update Task</button>
+                    <a href="{% url 'core:task_list' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
