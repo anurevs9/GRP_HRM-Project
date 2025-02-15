@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Update Role{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Role Updation</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">Role Name</label>
+                            {{ form.name }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Role Description:</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="mb-3 form-check">  {# Wrap status in form-check for Bootstrap styling #}
+                            {{ form.status }}  {# Render the status field (checkbox) #}
+                            <label class="form-check-label" for="{{ form.status.id_for_label }}">Active Status</label> {# Label for the checkbox #}
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Role</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -60,6 +60,13 @@
               <span>Recruitment</span>
             </a>
           {% endif %}
+         <!-- **ROLES - ADDED HERE** -->
+          {% if request.user.employee.role.name == 'ADMIN' %}
+            <a href="{% url 'core:role_list' %}" class="nav-link {% if 'role' in request.path %}active{% endif %}">
+              <i class="bi bi-person-gear"></i>
+              <span>Roles</span>
+            </a>
+          {% endif %}
           <!-- Attendance -->
           <a href="{% url 'core:attendance_mark' %}" class="nav-link {% if 'attendance' in request.path %}active{% endif %}">
             <i class="bi bi-file-text"></i>

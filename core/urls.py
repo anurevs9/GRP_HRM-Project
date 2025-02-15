@@ -19,6 +19,12 @@ urlpatterns = [
     path('employee/add/', views.add_employee, name='add_employee'),
     path('employee/edit/<int:employee_id>/', views.edit_employee, name='edit_employee'),
 
+    #Role URLs
+    path('roles/', views.role_list, name='role_list'),
+    path('roles/create/', views.role_create, name='role_create'),
+    path('roles/update/<int:role_id>/', views.role_update, name='role_update'),
+    path('roles/delete/<int:role_id>/', views.role_delete, name='role_delete'),
+
     # Task management URLs
     path('task/add/', views.add_task, name='add_task'),
     path('task/update/<int:task_id>/', views.update_task, name='update_task'),

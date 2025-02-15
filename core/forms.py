@@ -152,7 +152,7 @@ class ProfileForm(forms.ModelForm):
 class RoleForm(forms.ModelForm):
     class Meta:
         model = Role
-        fields = ['name', 'description']
+        fields = ['name', 'description','status']
         widgets = {
             'name': forms.Select(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),

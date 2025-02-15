@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Roles{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title">Roles</h5>
+                        <a href="{% url 'core:role_create' %}" class="btn btn-primary">Create Role</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Sr.No</th>
+                                    <th>Role Name</th>
+                                    <th>Role Description</th>
+                                    <th>Status</th>  {# **New Status Column Header** #}
+                                    <th>Edit</th>
+                                    <th>Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for role in roles %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ role.name }}</td>
+                                        <td>{{ role.description }}</td>
+                                        <td>
+                                            {% if role.status %}
+                                                <span class="badge bg-success">Active</span>  {# Display "Active" badge if status is True #}
+                                            {% else %}
+                                                <span class="badge bg-danger">Inactive</span> {# Display "Inactive" badge if status is False #}
+                                            {% endif %}
+                                        </td>
+                                        <td><a href="{% url 'core:role_update' role_id=role.id %}" class="btn btn-sm btn-warning">Edit</a></td>
+                                        <td>
+                                            <form method="post" action="{% url 'core:role_delete' role_id=role.id %}" onsubmit="return confirm('Are you sure you want to make role: {{ role.name }} inactive?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center">No roles available.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

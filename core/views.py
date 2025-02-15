@@ -224,6 +224,12 @@ def add_employee(request):
     }
     return render(request, 'hrm/add_employee.html', context)  # Assuming core/add_employee.html
 
+def is_admin(user):
+    try:
+        return user.is_authenticated and user.employee.role.name == 'ADMIN'
+    except Employee.DoesNotExist: # Handle case where employee doesn't exist
+        return False
+
 @login_required
 def profile_setup(request):
     # Check if the user already has an employee profile
@@ -250,6 +256,52 @@ def user_logout(request):
     messages.success(request, 'You have been logged out successfully.')
     return redirect('core:login_register')
 
+@login_required
+def role_list(request):
+    roles = Role.objects.all()
+    return render(request, 'hrm/core/role_list.html', {'roles': roles})
+
+@login_required
+def role_create(request):
+    if request.method == 'POST':
+        form = RoleForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Role created successfully.')
+            return redirect('core:role_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = RoleForm() # Create an instance of RoleForm
+    return render(request, 'hrm/core/role_create.html', {'form': form}) # Pass the form to the template
+
+@login_required
+def role_update(request, role_id):
+    role = get_object_or_404(Role, pk=role_id)
+    if request.method == 'POST':
+        form = RoleForm(request.POST, instance=role)
+        if form.is_valid():
+            form.save()  # This will now save name, description, and status
+            messages.success(request, 'Role updated successfully.')
+            return redirect('core:role_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = RoleForm(instance=role)
+    return render(request, 'hrm/core/role_update.html', {'form': form, 'role': role})
+
+@login_required
+@user_passes_test(is_admin)# Restrict to Admin users
+def role_delete(request, role_id):
+    role = get_object_or_404(Role, pk=role_id)
+
+    if request.method == 'POST':
+        role.status = False  # Soft delete: set status to False (inactive)
+        role.save()
+        messages.success(request, f'Role "{role.name}" made inactive successfully.') # Updated message
+        return redirect('core:role_list')
+
+    return redirect('core:role_list')
 
 @employee_required
 def edit_employee(request, employee_id):
@@ -311,12 +363,6 @@ def update_task(request, task_id):
     else:
         form = TaskForm(instance=task)
     return render(request, 'hrm/update_task.html', {'form': form, 'task': task}) # Assuming core/update_task.html
-
-def is_admin(user):
-    try:
-        return user.is_authenticated and user.employee.role.name == 'ADMIN'
-    except Employee.DoesNotExist: # Handle case where employee doesn't exist
-        return False
 
 
 
