@@ -4,6 +4,7 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 
 from .models import (
@@ -372,6 +373,13 @@ class SignupForm(UserCreationForm):
         self.fields['email'].widget.attrs.update({'placeholder': 'Enter your email', 'class': 'form-control'})
         self.fields['password1'].widget.attrs.update({'placeholder': 'Enter your password', 'class': 'form-control'})
         self.fields['password2'].widget.attrs.update({'placeholder': 'Confirm your password', 'class': 'form-control'})
+
+    def clean_email(self):
+        """Check if the email is already in use."""
+        email = self.cleaned_data.get('email')
+        if email and User.objects.filter(email=email).exists():
+            raise ValidationError("This email is already registered. Please use a different email.")
+        return email
 
     def save(self, commit=True):
         user = super().save(commit=False)
