@@ -313,14 +313,19 @@ def edit_employee(request, employee_id):
     user = employee.user
 
     if request.method == 'POST':
+        # Store the original password hash
+        original_password = user.password
         user_form = UserForm(request.POST, instance=user)
         employee_form = EmployeeForm(request.POST, request.FILES, instance=employee)
         print("Initial user_form data:", user_form.initial)
 
         if user_form.is_valid() and employee_form.is_valid():
             user = user_form.save(commit=False)
-            if user_form.cleaned_data['password']:
-                user.set_password(user_form.cleaned_data['password'])
+            new_password = user_form.cleaned_data.get('password')
+            if new_password:  # Only set password if a new one is provided
+                user.set_password(new_password)
+            else:
+                user.password = original_password  # Restore original password if no new one
             user.save()
             employee = employee_form.save()
             messages.success(request, 'Employee updated successfully.')
@@ -335,7 +340,6 @@ def edit_employee(request, employee_id):
         'employee': employee
     }
     return render(request, 'hrm/edit_employee.html', context)
-
 
 @employee_required
 def delete_employee(request, employee_id):

@@ -22,31 +22,45 @@ class RegisterForm(UserCreationForm):
 
 
 class UserForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput, required=False)
-    confirm_password = forms.CharField(widget=forms.PasswordInput, required=False)
+    password = forms.CharField(widget=forms.PasswordInput, required=False, label="New Password (leave blank to keep current)")
+    confirm_password = forms.CharField(widget=forms.PasswordInput, required=False, label="Confirm New Password")
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'password']
+        fields = ['username', 'first_name', 'last_name', 'email']  # Exclude password from default fields
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add password fields dynamically
+        self.fields['password'] = forms.CharField(widget=forms.PasswordInput, required=False, label="New Password (leave blank to keep current)")
+        self.fields['confirm_password'] = forms.CharField(widget=forms.PasswordInput, required=False, label="Confirm New Password")
 
     def clean(self):
         cleaned_data = super().clean()
         password = cleaned_data.get("password")
         confirm_password = cleaned_data.get("confirm_password")
 
-        if password and confirm_password and password != confirm_password:
-            self.add_error('confirm_password', "Password and confirm password do not match.")
+        if password or confirm_password:
+            if not password:
+                self.add_error('password', "Please enter a new password.")
+            elif not confirm_password:
+                self.add_error('confirm_password', "Please confirm the new password.")
+            elif password != confirm_password:
+                self.add_error('confirm_password', "Password and confirm password do not match.")
         return cleaned_data
+
     def clean_username(self):
         username = self.cleaned_data.get('username')
         if User.objects.filter(username=username).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError('Username already exists.')
         return username
+
     def save(self, commit=True):
         user = super().save(commit=False)
-        password = self.cleaned_data.get("password") # Get password
-        if password:
-             user.set_password(password)  # Hash the password, only if it is given
+        password = self.cleaned_data.get("password")
+        if password:  # Only set password if a new one is provided and validated
+            user.set_password(password)
+        # If no new password is provided, the existing password is retained
         if commit:
             user.save()
         return user
