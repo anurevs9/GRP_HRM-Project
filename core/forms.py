@@ -1,6 +1,11 @@
+import random
+
 from django import forms
+from django.conf import settings
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
+from django.core.mail import send_mail
+
 from .models import (
     Employee, Department, Role, Task, Leave, Performance,
     Recruitment, Candidate, Training, Payroll, Attendance
@@ -376,3 +381,37 @@ class SignupForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+class ForgotPasswordForm(forms.Form):
+    email = forms.EmailField(label="Registered Email", max_length=100)
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if not User.objects.filter(email=email).exists():
+            raise forms.ValidationError("No user is registered with this email address.")
+        return email
+
+class OTPVerificationForm(forms.Form):
+    otp = forms.CharField(label="One-Time Password", max_length=6, min_length=6, widget=forms.TextInput(attrs={'placeholder': 'Enter 6-digit OTP'}))
+
+class ResetPasswordForm(forms.Form):
+    new_password = forms.CharField(label="New Password", widget=forms.PasswordInput, min_length=8)
+    confirm_password = forms.CharField(label="Confirm New Password", widget=forms.PasswordInput)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password = cleaned_data.get("new_password")
+        confirm_password = cleaned_data.get("confirm_password")
+        if new_password != confirm_password:
+            raise forms.ValidationError("Passwords do not match.")
+        return cleaned_data
+
+# Helper function to generate and send OTP
+def generate_and_send_otp(email):
+    otp = str(random.randint(100000, 999999))
+    subject = 'Password Reset OTP'
+    message = f'Your OTP for password reset is: {otp}\nThis OTP is valid for 10 minutes.'
+    from_email = settings.DEFAULT_FROM_EMAIL
+    recipient_list = [email]
+    send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+    return otp

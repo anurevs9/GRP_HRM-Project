@@ -1,7 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-  <head>
+<head>
     <meta charset="UTF-8">
     <title>Login and Registration Form</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,116 +11,103 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/login_register.css' %}">
-   </head>
+</head>
 <body>
-  <div class="container">
+<div class="container">
     <input type="checkbox" id="flip">
     <div class="cover">
-      <div class="front">
-        <img src="{% static 'images/12.png' %}" alt="Front Image" class="img-fluid">
-        <div class="text">
-          <span class="text-1">Every new friend is a <br> new adventure</span>
-          <span class="text-2">Let's get connected</span>
+        <div class="front">
+            <img src="{% static 'images/12.png' %}" alt="Front Image" class="img-fluid">
+            <div class="text">
+                <span class="text-1">Every new friend is a <br> new adventure</span>
+                <span class="text-2">Let's get connected</span>
+            </div>
         </div>
-      </div>
-      <div class="back">
-        <img class="img-fluid" src="{% static 'images/11.png' %}" alt="Back Image">
-        <div class="text">
-          <span class="text-1">Complete miles of journey <br> with one step</span>
-          <span class="text-2">Let's get started</span>
+        <div class="back">
+            <img class="img-fluid" src="{% static 'images/11.png' %}" alt="Back Image">
+            <div class="text">
+                <span class="text-1">Complete miles of journey <br> with one step</span>
+                <span class="text-2">Let's get started</span>
+            </div>
         </div>
-      </div>
     </div>
     <div class="forms">
         <div class="form-content">
-          <div class="login-form">
-            <div class="title">Login</div>
-            <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="login_submit" value="1">
-                <div class="input-boxes">
-                    <div class="input-box">
-                        <i class="fas fa-envelope"></i>
-                        {# Render email field from login_form #}
-                        {{ login_form.username }}
-                        <div class="text-danger">{{ login_form.username.errors }}</div>
+            <div class="login-form">
+                <div class="title">Login</div>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="login_submit" value="1">
+                    <div class="input-boxes">
+                        <div class="input-box">
+                            <i class="fas fa-envelope"></i>
+                            {{ login_form.username }}
+                            <div class="text-danger">{{ login_form.username.errors }}</div>
+                        </div>
+                        <div class="input-box">
+                            <i class="fas fa-lock"></i>
+                            {{ login_form.password }}
+                            <div class="text-danger">{{ login_form.password.errors }}</div>
+                        </div>
+                        <div class="text">
+                            <a href="{% url 'core:forgot_password' %}">Forgot password?</a>
+                        </div>
+                        <div class="button input-box">
+                            <input type="submit" value="Submit" class="btn btn-primary">
+                        </div>
+                        <div class="text sign-up-text">Don't have an account? <label for="flip">Signup now</label></div>
                     </div>
-                    <div class="input-box">
-                        <i class="fas fa-lock"></i>
-                        {# Render password field from login_form #}
-                        {{ login_form.password }}
-                        <div class="text-danger">{{ login_form.password.errors }}</div>
+                </form>
+            </div>
+            <div class="signup-form">
+                <div class="title">Signup</div>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="signup_submit" value="1">
+                    <div class="input-boxes">
+                        <div class="input-box">
+                            <i class="fas fa-user"></i>
+                            {{ signup_form.username }}
+                            <div class="text-danger">{{ signup_form.username.errors }}</div>
+                        </div>
+                        <div class="input-box">
+                            <i class="fas fa-user"></i>
+                            {{ signup_form.first_name }}
+                            <div class="text-danger">{{ signup_form.first_name.errors }}</div>
+                        </div>
+                        <div class="input-box">
+                            <i class="fas fa-user"></i>
+                            {{ signup_form.last_name }}
+                            <div class="text-danger">{{ signup_form.last_name.errors }}</div>
+                        </div>
+                        <div class="input-box">
+                            <i class="fas fa-envelope"></i>
+                            {{ signup_form.email }}
+                            <div class="text-danger">{{ signup_form.email.errors }}</div>
+                        </div>
+                        <div class="input-box">
+                            <i class="fas fa-lock"></i>
+                            {{ signup_form.password1 }}
+                            <div class="text-danger">{{ signup_form.password.errors }}</div>
+                        </div>
+                        <div class="input-box">
+                            <i class="fas fa-lock"></i>
+                            {{ signup_form.password2 }}
+                            <div class="text-danger">{{ signup_form.password2.errors }}</div>
+                        </div>
+                        <div class="button input-box">
+                            <input type="submit" value="Submit" class="btn btn-primary">
+                        </div>
+                        <div class="text sign-up-text">Already have an account? <label for="flip">Login now</label></div>
                     </div>
-                    <div class="text"><a href="#">Forgot password?</a></div>
-                    <div class="button input-box">
-                        <input type="submit" value="Submit" class="btn btn-primary">
-                    </div>
-                    <div class="text sign-up-text">Don't have an account? <label for="flip">Signup now</label></div>
-                </div>
-            </form>
-          </div>
-          <div class="signup-form">
-            <div class="title">Signup</div>
-            <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="signup_submit" value="1">
-                <div class="input-boxes">
-                    <div class="input-box">
-                    <i class="fas fa-user"></i>
-                    {{ signup_form.username }}
-                    <div class="text-danger">{{ signup_form.username.errors }}</div>
-                    </div>
-
-                    <div class="input-box">
-                        <i class="fas fa-user"></i>
-                        {{ signup_form.first_name }}
-                        <div class="text-danger">{{ signup_form.first_name.errors }}</div>
-                    </div>
-                    <div class="input-box">
-                        <i class="fas fa-user"></i>
-                        {{ signup_form.last_name }}
-                        <div class="text-danger">{{ signup_form.last_name.errors }}</div>
-                    </div>
-
-                    <div class="input-box">
-                        <i class="fas fa-envelope"></i>
-                        {# Render email field from signup_form #}
-                        {{ signup_form.email }}
-                        <div class="text-danger">{{ signup_form.email.errors }}</div>
-                    </div>
-                    <div class="input-box">
-                        <i class="fas fa-lock"></i>
-                        {# Render password field from signup_form #}
-                        {{ signup_form.password1 }}
-                        <div class="text-danger">{{ signup_form.password.errors }}</div>
-                    </div>
-                     <div class="input-box">
-                        <i class="fas fa-lock"></i>
-                        {# Render password confirmation field from signup_form #}
-                         {{ signup_form.password2 }}
-                        <div class="text-danger">{{ signup_form.password2.errors }}</div>
-                    </div>
-                    <div class="button input-box">
-                        <input type="submit" value="Submit" class="btn btn-primary">
-                    </div>
-                    <div class="text sign-up-text">Already have an account? <label for="flip">Login now</label></div>
-                </div>
-            </form>
-          </div>
+                </form>
+            </div>
         </div>
     </div>
-  </div>
-  <!-- Bootstrap JS and Popper.js -->
-      <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-      <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
-      <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-  {# Display Django messages framework messages #}
-{#    {% if messages %}#}
-{#    <ul class="messages">#}
-{#        {% for message in messages %}#}
-{#        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>#}
-{#        {% endfor %}#}
-{#    </ul>#}
-{#    {% endif %}#}
+</div>
+<!-- Bootstrap JS and Popper.js -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>

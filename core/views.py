@@ -4,6 +4,7 @@ from datetime import datetime
 
 import razorpay
 from django.conf import settings
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.db.models import Q, Avg
 from django.db.models.functions import ExtractMonth
@@ -918,3 +919,57 @@ def training_report(request):
         'report_title': 'Training Report',
     }
     return render(request, 'hrm/reports/training_report.html', context)
+
+def forgot_password(request):
+    if request.method == 'POST':
+        form = ForgotPasswordForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            otp = generate_and_send_otp(email)
+            # Store OTP in cache with a 10-minute expiration
+            cache.set(f'otp_{email}', otp, 600)  # 600 seconds = 10 minutes
+            cache.set(f'email_{otp}', email, 600)
+            messages.success(request, 'An OTP has been sent to your email. Please check your inbox.')
+            return redirect('core:verify_otp')
+    else:
+        form = ForgotPasswordForm()
+    return render(request, 'hrm/forgot_password.html', {'form': form})
+
+def verify_otp(request):
+    if request.method == 'POST':
+        form = OTPVerificationForm(request.POST)
+        if form.is_valid():
+            otp = form.cleaned_data['otp']
+            cached_email = cache.get(f'email_{otp}')
+            if cached_email:
+                cache.delete(f'email_{otp}')  # Clear the OTP
+                cache.delete(f'otp_{cached_email}')  # Clear the email-OTP mapping
+                cache.set('reset_email', cached_email, 600)  # Store email for reset
+                messages.success(request, 'OTP verified successfully. Please set a new password.')
+                return redirect('core:reset_password')
+            else:
+                messages.error(request, 'Invalid or expired OTP. Please try again.')
+    else:
+        form = OTPVerificationForm()
+    return render(request, 'hrm/verify_otp.html', {'form': form})
+
+def reset_password(request):
+    if request.method == 'POST':
+        form = ResetPasswordForm(request.POST)
+        if form.is_valid():
+            user_email = cache.get('reset_email')  # Retrieve email from previous step (set in verify_otp if needed)
+            if user_email:
+                user = User.objects.get(email=user_email)
+                user.set_password(form.cleaned_data['new_password'])
+                user.save()
+                cache.delete('reset_email')  # Clear the email after reset
+                messages.success(request, 'Password reset successfully. Please log in with your new password.')
+                return redirect('core:login_register')
+            else:
+                messages.error(request, 'Session expired. Please start the process again.')
+    else:
+        form = ResetPasswordForm()
+        # Store the email in cache for the reset process (set this in verify_otp view)
+        if 'email' in request.session:
+            cache.set('reset_email', request.session['email'], 600)
+    return render(request, 'hrm/reset_password.html', {'form': form})

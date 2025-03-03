@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load rest_framework %}
+{% load static %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="auth-card shadow-sm">
+                <div class="auth-card-header bg-primary text-white text-center">
+                    <h4 class="mb-0">Verify OTP</h4>
+                </div>
+                <div class="auth-card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">×</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="{{ form.otp.id_for_label }}">One-Time Password</label>
+                            {{ form.otp|add_class:"form-control" }}
+                            {% if form.otp.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.otp.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Verify OTP</button>
+                    </form>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'core:forgot_password' %}" class="text-muted">Resend OTP</a> | 
+                        <a href="{% url 'core:login_register' %}" class="text-muted">Back to Login</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    (function() {
+        'use strict';
+        window.addEventListener('load', function() {
+            var forms = document.getElementsByClassName('needs-validation');
+            var validation = Array.prototype.filter.call(forms, function(form) {
+                form.addEventListener('submit', function(event) {
+                    if (form.checkValidity() === false) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        }, false);
+    })();
+</script>
+{% endblock %}

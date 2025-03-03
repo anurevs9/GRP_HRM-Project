@@ -14,6 +14,9 @@ urlpatterns = [
     path('tasks/', views.task_list, name='task_list'),
     path('leave-request/', views.leave_request, name='leave_request'),
     path('performance-review/<int:employee_id>/', views.performance_review, name='performance_review'),
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('verify-otp/', views.verify_otp, name='verify_otp'),
+    path('reset-password/', views.reset_password, name='reset_password'),
 
     # Employee management URLs
     path('employee/add/', views.add_employee, name='add_employee'),

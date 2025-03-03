@@ -31,7 +31,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -176,6 +175,16 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'chintalaanudeep41@gmail.com'
 EMAIL_HOST_PASSWORD = 'hapq dyim xqez qpei'
-DEFAULT_FROM_EMAIL = 'Epic HR <your_email@gmail.com>'
+DEFAULT_FROM_EMAIL = 'chintalaanudeep41@gmail.com'
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',  # Use port 6379 (default) and DB 1
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'KEY_PREFIX': 'hrm_project',  # Optional: Prefix for cache keys to avoid collisions
+    }
+}
 PAYROLL_ADMIN_ROLES = ('ADMIN', 'MANAGER'),
