@@ -58,7 +58,7 @@
                             {{ employee_form.employee_id|addclass:"form-control" }}
                         </div>
                         <div class="mb-3">
-                            <label for="phone" class="form-label">Phone</label>
+                            <label for="phone" class="form-label">Mobile Number</label>
                             {{ employee_form.phone|addclass:"form-control" }}
                         </div>
                         <div class="mb-3">
@@ -66,7 +66,7 @@
                             {{ employee_form.address|addclass:"form-control" }}
                         </div>
                         <div class="mb-3">
-                            <label for="date_joined" class="form-label">Date Joined</label>
+                            <label for="date_joined" class="form-label">Date of Joining</label>
                             {{ employee_form.date_joined|addclass:"form-control" }}
                         </div>
                         <div class="mb-3">
@@ -77,6 +77,13 @@
                                 </div>
                             {% endif %}
                             {{ employee_form.profile_picture|addclass:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="reporting_manager" class="form-label">Allocate Reporting Manager</label>
+                            {{ employee_form.reporting_manager|addclass:"form-control" }}
+                            {% if employee_form.reporting_manager.errors %}
+                                <div class="invalid-feedback d-block">{{ employee_form.reporting_manager.errors.as_text }}</div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

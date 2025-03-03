@@ -85,8 +85,8 @@ project_root/
 ### Clone the Repository
 
 ```bash
-git clone <repository_url>
-cd <project_directory>
+git clone https://github.com/anurevs9/GRP_HRM-Project.git
+cd hrm_project
 ```
 
 ### Create a Virtual Environment (Recommended)
@@ -164,5 +164,5 @@ https://anurevsx99.pythonanywhere.com/login-register/
 
 ---
 
-This project is actively being developed. Contributions and feedback are welcome! 🚀
+This project is actively being developed. Contributions and feedback are welcome! 
 
