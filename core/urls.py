@@ -18,6 +18,7 @@ urlpatterns = [
     # Employee management URLs
     path('employee/add/', views.add_employee, name='add_employee'),
     path('employee/edit/<int:employee_id>/', views.edit_employee, name='edit_employee'),
+    path('employee/delete/<int:employee_id>/', views.delete_employee, name='delete_employee'),
 
     #Role URLs
     path('roles/', views.role_list, name='role_list'),

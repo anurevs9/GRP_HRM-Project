@@ -55,10 +55,12 @@ class UserForm(forms.ModelForm):
 class EmployeeForm(forms.ModelForm):
     class Meta:
         model = Employee
-        exclude = ['user']  # Exclude user field (it's handled separately)
+        exclude = ['user']  # Exclude user field (handled separately)
         widgets = {
             'date_joined': forms.DateInput(attrs={'type': 'date'}),
             'address': forms.Textarea(attrs={'rows': 3}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'reporting_manager': forms.Select(attrs={'class': 'form-control'}),
         }
         error_messages = {
             'department': {'required': 'Please select a department'},
@@ -69,9 +71,12 @@ class EmployeeForm(forms.ModelForm):
             'date_joined': {'required': 'Date joined is required'},
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['reporting_manager'].queryset = Employee.objects.all()  # Populate with all employees
+
     def clean_phone(self):
         phone = self.cleaned_data.get('phone')
-        # Add any custom phone number validation here (e.g., using regex)
         return phone
 
     def clean_employee_id(self):

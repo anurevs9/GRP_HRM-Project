@@ -1,69 +1,98 @@
 {% extends 'base.html' %}
+{% load formtags %}
 
-{% block title %}Edit Profile{% endblock %}
+{% block title %}Edit Employee{% endblock %}
 
 {% block content %}
-<div class="container mt-4">  {# Added mt-4 for some top margin #}
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="mb-0">Edit Profile</h4>  {# Simpler header #}
-                </div>
-                <div class="card-body">
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
+<div class="container-fluid">
+    <h1 class="mb-4">Edit Employee - {{ employee.user.get_full_name }}</h1>
 
-                        <div class="row mb-3">
-                            <div class="col-md-3 text-center">
-                                {# Display profile picture if it exists #}
-                                {% if request.user.employee.profile_picture %}
-                                    <img src="{{ request.user.employee.profile_picture.url }}"
-                                         alt="Profile Picture"
-                                         class="img-fluid rounded-circle"
-                                         style="width: 150px; height: 150px; object-fit: cover;">
-                                {% else %}
-                                     <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mb-3"
-                                         style="width: 150px; height: 150px; margin: 0 auto;">
-                                        <i class="bi bi-person-circle fs-1 text-secondary"></i>
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-9">
-                                <div class="row"> {# Use a loop #}
-                                  {% for field in form %}
-                                    <div class="mb-3 col-md-6">
-                                        <label for="{{ field.id_for_label }}" class="form-label">
-                                            {{ field.label }}
-                                            {% if field.field.required %}
-                                                <span class="text-danger">*</span> <span class="text-muted">(Required)</span>
-                                            {% endif %}
-                                        </label>
-                                        {{ field }}
-                                        {% if field.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {{ field.errors }}
-                                            </div>
-                                        {% endif %}
-                                        {% if field.help_text %}
-                                            <small class="form-text text-muted">{{ field.help_text }}</small>
-                                        {% endif %}
-                                    </div>
-                                  {% endfor %}
+    <div class="card">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <!-- User Information -->
+                    <div class="col-md-6">
+                        <h4 class="mb-3">User Information</h4>
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            {{ user_form.username|addclass:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="first_name" class="form-label">First Name</label>
+                            {{ user_form.first_name|addclass:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="last_name" class="form-label">Last Name</label>
+                            {{ user_form.last_name|addclass:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            {{ user_form.email|addclass:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">New Password (leave blank to keep current)</label>
+                            {{ user_form.password|addclass:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">Confirm New Password</label>
+                            {{ user_form.confirm_password|addclass:"form-control" }}
+                        </div>
+                    </div>
+
+                    <!-- Employee Information -->
+                    <div class="col-md-6">
+                        <h4 class="mb-3">Employee Information</h4>
+                        <div class="mb-3">
+                            <label for="department" class="form-label">Department</label>
+                            {{ employee_form.department|addclass:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="role" class="form-label">Role</label>
+                            {{ employee_form.role|addclass:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="employee_id" class="form-label">Employee ID</label>
+                            {{ employee_form.employee_id|addclass:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Mobile Number</label>
+                            {{ employee_form.phone|addclass:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            {{ employee_form.address|addclass:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="date_joined" class="form-label">Date of Joining</label>
+                            {{ employee_form.date_joined|addclass:"form-control" }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="profile_picture" class="form-label">Profile Picture</label>
+                            {% if employee.profile_picture %}
+                                <div class="mb-2">
+                                    <img src="{{ employee.profile_picture.url }}" alt="Current profile picture" class="img-thumbnail" style="max-width: 150px;">
                                 </div>
-                            </div>
+                            {% endif %}
+                            {{ employee_form.profile_picture|addclass:"form-control" }}
                         </div>
-                        <div class="d-flex justify-content-between">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle me-2"></i>Save Changes
-                            </button>
-                            <a href="{% url 'core:dashboard' %}" class="btn btn-secondary">
-                                <i class="bi bi-x-circle me-2"></i>Cancel
-                            </a>
+                        <div class="mb-3">
+                            <label for="reporting_manager" class="form-label">Allocate Reporting Manager</label>
+                            {{ employee_form.reporting_manager|addclass:"form-control" }}
+                            {% if employee_form.reporting_manager.errors %}
+                                <div class="invalid-feedback d-block">{{ employee_form.reporting_manager.errors.as_text }}</div>
+                            {% endif %}
                         </div>
-                    </form>
+                    </div>
                 </div>
-            </div>
+
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">Update Employee</button>
+                    <a href="{% url 'core:employee_list' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
         </div>
     </div>
 </div>

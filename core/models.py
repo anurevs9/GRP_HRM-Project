@@ -37,10 +37,13 @@ class Employee(models.Model):
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True)
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True)
     employee_id = models.CharField(max_length=10, unique=True)
-    phone = models.CharField(max_length=15)
+    phone = models.CharField(max_length=15)  # Maps to 'mobile'
     address = models.TextField()
-    date_joined = models.DateField()
+    date_joined = models.DateField()  # Maps to 'date_of_joining'
     profile_picture = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
+    reporting_manager = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_employees')  # New field
+    created_at = models.DateTimeField(auto_now_add=True)  # New field
+    updated_at = models.DateTimeField(auto_now=True)  # New field
 
     def __str__(self):
         return self.user.get_full_name()

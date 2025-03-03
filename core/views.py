@@ -211,7 +211,7 @@ def add_employee(request):
             employee.user = user
             employee.save()
             messages.success(request, 'Employee added successfully.')
-            return redirect('core:employee_list')
+            return redirect('core:employee_list')  # Redirect to dashboard
         else:
             messages.error(request, 'There was an error adding the employee. Please check the form.')
     else:
@@ -222,7 +222,7 @@ def add_employee(request):
         'user_form': user_form,
         'employee_form': employee_form,
     }
-    return render(request, 'hrm/add_employee.html', context)  # Assuming core/add_employee.html
+    return render(request, 'hrm/add_employee.html', context)
 
 def is_admin(user):
     try:
@@ -320,11 +320,11 @@ def edit_employee(request, employee_id):
         if user_form.is_valid() and employee_form.is_valid():
             user = user_form.save(commit=False)
             if user_form.cleaned_data['password']:
-                user.set_password(user_form.cleaned_data['password'])  # Hash password
+                user.set_password(user_form.cleaned_data['password'])
             user.save()
             employee = employee_form.save()
             messages.success(request, 'Employee updated successfully.')
-            return redirect('core:employee_list')
+            return redirect('core:employee_list')  # Redirect to dashboard
     else:
         user_form = UserForm(instance=user)
         employee_form = EmployeeForm(instance=employee)
@@ -332,9 +332,29 @@ def edit_employee(request, employee_id):
     context = {
         'user_form': user_form,
         'employee_form': employee_form,
-        'employee': employee  # Pass the employee object to the template
+        'employee': employee
     }
-    return render(request, 'hrm/edit_employee.html', context) # Assuming core/edit_employee.html
+    return render(request, 'hrm/edit_employee.html', context)
+
+
+@employee_required
+def delete_employee(request, employee_id):
+    if request.employee.role.name not in 'settings.PAYROLL_ADMIN_ROLES':
+        messages.error(request, 'You do not have permission to delete employees.')
+        return redirect('core:employee_list')
+
+    if request.method == 'POST':
+        try:
+            employee = get_object_or_404(Employee, id=employee_id)
+            employee.delete()
+            messages.success(request, 'Employee deleted successfully.')
+        except Employee.DoesNotExist:
+            messages.error(request, 'No employee matches the given query.')
+    else:  # Handle GET requests
+        messages.error(request,
+                       'Deletion is not allowed via GET request. Please use the delete button on the employee list.')
+
+    return redirect('core:employee_list')
 
 
 @employee_required
