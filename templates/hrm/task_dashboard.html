@@ -1,0 +1,70 @@
+<div class="row">
+  <div class="col-md-12">
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Sr.No</th>
+            <th>Employee Name</th>
+            <th>Task Title</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for assignment in assignments %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ assignment.employee.user.get_full_name }}</td>
+            <td>{{ assignment.task.task_title }}</td>
+            <td>{{ assignment.task.start_date }}</td>
+            <td>{{ assignment.task.end_date }}</td>
+            <td>
+              <span class="badge {% if assignment.status == 'COMPLETED' %}bg-success{% elif assignment.status == 'IN_PROGRESS' %}bg-warning{% elif assignment.status == 'PENDING' %}bg-secondary{% endif %}">
+                {{ assignment.status }}
+              </span>
+            </td>
+            <td>
+              {% if request.user.employee.role.name in 'ADMIN,MANAGER,TEAM_LEADER' %}
+              <a href="{% url 'core:update_task' assignment.task.task_id %}" class="btn btn-warning btn-sm">Edit</a>
+              <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteModal{{ assignment.task.task_id }}">Delete</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center">No tasks found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <!-- Delete Confirmation Modal -->
+    {% for assignment in assignments %}
+    <div class="modal fade" id="deleteModal{{ assignment.task.task_id }}" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel{{ assignment.task.task_id }}" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="deleteModalLabel{{ assignment.task.task_id }}">Confirm Deletion</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            Are you sure you want to delete the task "{{ assignment.task.task_title }}"?
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+            <form method="post" action="{% url 'core:delete_task' assignment.task.task_id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger">Confirm</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>

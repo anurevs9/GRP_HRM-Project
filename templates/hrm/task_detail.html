@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Task Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-6">Task Details</h1>
+        <!-- Dynamically set the back URL based on the user's role -->
+        {% if request.employee.role.name == 'EMPLOYEE' %}
+            <a href="{% url 'core:employee_task_view' %}" class="btn btn-secondary fw-semibold">Back to Task List</a>
+        {% elif request.employee.role.name in settings.MANAGER_ROLES %}
+            <a href="{% url 'core:manager_task_view' %}" class="btn btn-secondary fw-semibold">Back to Task List</a>
+        {% else %}
+            <a href="{% url 'core:admin_task_view' %}" class="btn btn-secondary fw-semibold">Back to Task List</a>
+        {% endif %}
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">{{ assignment.task.task_title }}</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <p><strong>Employee:</strong> {{ assignment.employee.user.get_full_name|default:'Unnamed Employee' }}</p>
+                            <p><strong>Task Description:</strong> {{ assignment.task.task_description }}</p>
+                            <p><strong>Priority:</strong>
+                                <span class="badge {% if assignment.task.task_priority == 'HIGH' %}bg-danger{% elif assignment.task.task_priority == 'MEDIUM' %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ assignment.task.task_priority|title }}
+                                </span>
+                            </p>
+                            <p><strong>Type:</strong> {{ assignment.task.task_type|title }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Start Date:</strong> {{ assignment.task.start_date|date:"d-m-Y" }}</p>
+                            <p><strong>End Date:</strong> {{ assignment.task.end_date|date:"d-m-Y" }}</p>
+                            <p><strong>Status:</strong>
+                                <span id="status-badge" class="badge {% if assignment.status == 'COMPLETED' %}bg-success{% elif assignment.status == 'IN_PROGRESS' %}bg-warning{% else %}bg-secondary{% endif %} py-2 px-3">
+                                    {{ assignment.status|title }}
+                                </span>
+                            </p>
+                            <p><strong>Assigned By:</strong> {{ assignment.assigned_by.get_full_name|default:'Unknown' }}</p>
+                            <p><strong>Assigned Date:</strong> {{ assignment.assigned_date|date:"d-m-Y H:i" }}</p>
+                            <p id="completed-at" class="completed-at" {% if assignment.status != 'COMPLETED' %}style="display: none;"{% endif %}>
+                                <strong>Completed At:</strong> {{ assignment.completed_at|date:"d-m-Y H:i"|default:'N/A' }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="mt-4 text-center">
+                        {% if request.user.employee.role.name in 'ADMIN,MANAGER,TEAM_LEADER' %}
+                        <a href="{% url 'core:update_task' assignment.task.task_id %}" class="btn btn-warning btn-sm fw-semibold mx-2">Edit Task</a>
+                        <button class="btn btn-danger btn-sm fw-semibold mx-2" data-bs-toggle="modal" data-bs-target="#deleteModal{{ assignment.task.task_id }}">Delete Task</button>
+                        {% if assignment.status != 'COMPLETED' %}
+                        <form action="{% url 'core:mark_completed' assignment.assignment_id %}" method="post" style="display: inline;" id="mark-complete-form-{{ assignment.assignment_id }}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-success btn-sm fw-semibold mx-2" data-assignment-id="{{ assignment.assignment_id }}">Mark Completed</button>
+                        </form>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal{{ assignment.task.task_id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ assignment.task.task_id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel{{ assignment.task.task_id }}">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete the task "{{ assignment.task.task_title }}"?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="post" action="{% url 'core:delete_task' assignment.task.task_id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Confirm</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: transform 0.2s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .badge {
+        font-size: 0.9rem;
+        font-weight: 500;
+        border-radius: 12px;
+        min-width: 90px;
+        display: inline-block;
+    }
+
+    .btn-sm {
+        padding: 6px 12px;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-sm:hover {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+</style>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('[id^="mark-complete-form-"]');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;  // Prevent multiple clicks
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => {
+                console.log('Response Status:', response.status);
+                return response.json().then(data => ({ status: response.status, data }));
+            })
+            .then(({ status, data }) => {
+                console.log('Response Data:', data);
+                if (status === 200 && data.status === 'success') {
+                    // Update status badge
+                    const statusBadge = document.getElementById('status-badge');
+                    statusBadge.classList.remove('bg-warning', 'bg-secondary');
+                    statusBadge.classList.add('bg-success');
+                    statusBadge.textContent = 'Completed';
+
+                    // Update completed_at
+                    const completedAt = document.getElementById('completed-at');
+                    if (data.completed_at) {
+                        completedAt.style.display = 'block';
+                        completedAt.innerHTML = `<strong>Completed At:</strong> ${data.completed_at}`;
+                    }
+
+                    // Remove the form
+                    form.remove();
+                } else {
+                    alert(data.message || 'Failed to mark task as completed.');
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Fetch Error:', error);
+                alert('An error occurred while marking the task as completed. Please try again.');
+                button.disabled = false;
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,4 +1,6 @@
-from django.urls import path
+from django.urls import path, reverse_lazy
+from django.views.generic import RedirectView
+
 from . import views
 from django.contrib.auth import views as auth_views
 
@@ -11,12 +13,14 @@ urlpatterns = [
     path('profile-setup/', views.profile_setup, name='profile_setup'),
     path('edit-profile/', views.edit_profile, name='edit_profile'),
     path('login-register/', views.login_register_view, name='login_register'),
-    path('tasks/', views.task_list, name='task_list'),
+    path('tasks/', RedirectView.as_view(url=reverse_lazy('core:admin_task_view')), name='task_list'),
     path('leave-request/', views.leave_request, name='leave_request'),
     path('performance-review/<int:employee_id>/', views.performance_review, name='performance_review'),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('verify-otp/', views.verify_otp, name='verify_otp'),
     path('reset-password/', views.reset_password, name='reset_password'),
+    path('employee/<int:employee_id>/performance/', views.employee_performance_detail,name='employee_performance_detail'),
+    path('performance-reviews/<int:performance_id>/', views.performance_review_detail, name='performance_review_detail'),
 
     # Employee management URLs
     path('employee/add/', views.add_employee, name='add_employee'),
@@ -32,6 +36,14 @@ urlpatterns = [
     # Task management URLs
     path('task/add/', views.add_task, name='add_task'),
     path('task/update/<int:task_id>/', views.update_task, name='update_task'),
+    path('task/delete/<int:task_id>/', views.delete_task, name='delete_task'),
+    path('mark_completed/<int:assignment_id>/', views.mark_completed, name='mark_completed'),
+    path('admin-tasks/', views.admin_task_view, name='admin_task_view'),
+    path('manager-tasks/', views.manager_task_view, name='manager_task_view'),
+    path('employee-tasks/', views.employee_task_view, name='employee_task_view'),
+    path('get-employees-by-department/', views.get_employees_by_department, name='get_employees_by_department'),
+    path('task/detail/<int:assignment_id>/', views.task_detail, name='task_detail'),
+
 
     # Department management URLs
     path('departments/', views.department_list, name='department_list'),

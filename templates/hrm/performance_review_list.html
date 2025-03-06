@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Performance Reviews{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-6">Performance Reviews</h1>
+        <!-- Back button, adjusting based on who is viewing -->
+        {% if request.user.employee.role.name == 'EMPLOYEE' %}
+          <a href="{% url 'core:employee_task_view' %}" class="btn btn-secondary fw-semibold">Back to Task List</a>
+        {% elif request.user.employee.role.name in settings.MANAGER_ROLE %}
+           <a href="{% url 'core:manager_task_view' %}" class="btn btn-secondary fw-semibold">Back to Task List</a>
+        {% else %}
+           <a href="{% url 'core:admin_task_view' %}" class="btn btn-secondary fw-semibold">Back to Task List</a>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            {% if performance_reviews %}
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">Performance Reviews</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Review Date</th>
+                                    <th>Rating</th>
+                                    <th>Feedback (Snippet)</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for review in performance_reviews %}
+                                <tr>
+                                    <td>{{ review.employee.user.get_full_name|default:"N/A" }}</td>
+                                    <td>{{ review.review_date|date:"d-m-Y" }}</td>
+                                    <td>
+                                       <span class="badge bg-primary">{{ review.rating }}</span>
+                                    </td>
+                                    <td>{{ review.feedback|truncatechars:100 }}</td>
+                                    <td>
+                                        <a href="{% url 'core:performance_review_detail' performance_id=review.performance_id %}" class="btn btn-info btn-sm fw-semibold">View Details</a>
+                                         {% if request.employee.role.name in settings.PERFORMANCE_ROLE and request.employee == review.employee.reporting_manager or request.employee.role.name == 'ADMIN' %}
+                                          <a href="{% url 'core:performance_review' employee_id=review.employee.user_id %}" class="btn btn-warning btn-sm fw-semibold">Edit</a>
+                                         {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No performance reviews found.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

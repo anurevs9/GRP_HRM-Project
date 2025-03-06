@@ -1,0 +1,386 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Employee Task View{% endblock %}
+
+{% block content %}
+<div class="page-main-content">
+    <div class="container-fluid py-4">
+        <!-- Welcome Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="welcome-section bg-light p-4 rounded shadow-sm">
+                    <h1 class="display-6 mb-1">Welcome, {{ request.user.get_full_name }}!</h1>
+                    <p class="text-muted fs-6 mb-0">{{ today|date:"l, F j, Y" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="nav-tabs-custom">
+                    <ul class="nav nav-tabs border-0">
+                        <li class="nav-item">
+                            <a class="nav-link fw-bold" href="{% url 'core:leave_request' %}">Leave Management</a>
+                        </li>
+                        <li class="nav-item">
+                            {% if request.employee.id %}
+                                <a class="nav-link fw-bold" href="{% url 'core:employee_performance_detail' employee_id=request.employee.id %}">Performance Review</a>
+                            {% else %}
+                                <a class="nav-link fw-bold" href="#" onclick="alert('Please complete your profile to access Performance Review.'); return false;">Performance Review</a>
+                            {% endif %}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Management Section -->
+        <div class="card mb-4 shadow-sm border-0">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0">Task Management</h5>
+                <!-- No Create Task button for Employee role -->
+            </div>
+            <div class="card-body p-4">
+                <!-- Filters Form -->
+                <form method="get" action="" class="mb-4">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="status_filter" class="form-label fw-semibold">Filter by Status</label>
+                            <select id="status_filter" name="status" class="form-select">
+                                <option value="">All</option>
+                                {% for choice in status_choices %}
+                                <option value="{{ choice }}" {% if status_filter == choice %}selected{% endif %}>
+                                    {{ choice|title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="date_from" class="form-label fw-semibold">Date From</label>
+                            <input type="date" id="date_from" name="date_from" class="form-control" value="{{ date_from }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="date_to" class="form-label fw-semibold">Date To</label>
+                            <input type="date" id="date_to" name="date_to" class="form-control" value="{{ date_to }}">
+                        </div>
+                        <div class="col-md-12 text-center mt-3">
+                            <button type="submit" class="btn btn-primary fw-bold px-4">Apply Filters</button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Task Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th scope="col" class="col-sr-no">Sr.No</th>
+                                <th scope="col" class="col-task">Task Title</th>
+                                <th scope="col" class="col-employee">Assigned To</th>
+                                <th scope="col" class="col-start-date">Start Date</th>
+                                <th scope="col" class="col-end-date">End Date</th>
+                                <th scope="col" class="col-status">Status</th>
+                                <th scope="col" class="col-details">See Details</th>
+                                <th scope="col" class="col-action">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in assignments %}
+                            <tr>
+                                <td class="col-sr-no">{{ assignments.start_index|add:forloop.counter0 }}</td>
+                                <td class="col-task">{{ assignment.task.task_title }}</td>
+                                <td class="col-employee">{{ assignment.employee.user.get_full_name|default:'Unnamed Employee' }}</td>
+                                <td class="col-start-date">{{ assignment.task.start_date|date:"d-m-Y" }}</td>
+                                <td class="col-end-date">{{ assignment.task.end_date|date:"d-m-Y" }}</td>
+                                <td class="col-status">
+                                    <span class="badge {% if assignment.status == 'COMPLETED' %}bg-success{% elif assignment.status == 'IN_PROGRESS' %}bg-warning{% else %}bg-secondary{% endif %} py-2 px-3">
+                                        {{ assignment.status|title }}
+                                    </span>
+                                </td>
+                                <td class="col-details">
+                                    <a href="{% url 'core:task_detail' assignment.assignment_id %}" class="btn btn-info btn-sm fw-semibold">See Details</a>
+                                </td>
+                                <td class="col-action">
+                                    {% if assignment.status != 'COMPLETED' %}
+                                        <button class="btn btn-success btn-sm fw-semibold mark-completed" data-assignment-id="{{ assignment.assignment_id }}">Mark Completed</button>
+                                    {% else %}
+                                        <span class="badge bg-success py-2 px-3">Completed</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">No tasks assigned</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if assignments.has_other_pages %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center mt-3">
+                        {% if assignments.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ assignments.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Previous</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                        {% endif %}
+
+                        {% for num in assignments.paginator.page_range %}
+                        <li class="page-item {% if assignments.number == num %}active{% endif %}">
+                            <a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% endfor %}
+
+                        {% if assignments.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ assignments.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">Next</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Task Statistics -->
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">Task Statistics</h5>
+                        <p class="mb-2"><strong>Total Tasks:</strong> {{ task_stats.total }}</p>
+                        <p class="mb-2"><strong>Completed:</strong> {{ task_stats.completed }}</p>
+                        <p class="mb-2"><strong>In Progress:</strong> {{ task_stats.in_progress }}</p>
+                        <p class="mb-0"><strong>Pending:</strong> {{ task_stats.pending }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">Task Status Chart</h5>
+                        <canvas id="taskChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Custom CSS for better UI and table alignment */
+    .page-main-content {
+        background-color: #f8f9fa;
+        min-height: 100vh;
+    }
+
+    .welcome-section {
+        transition: all 0.3s ease;
+    }
+
+    .welcome-section:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-tabs .nav-link {
+        color: #495057;
+        padding: 10px 20px;
+        border-radius: 5px;
+    }
+
+    .nav-tabs .nav-link.active {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .card-header {
+        border-bottom: none;
+    }
+
+    .form-label {
+        color: #343a40;
+    }
+
+    .form-select, .form-control {
+        border-radius: 5px;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+    }
+
+    .table th, .table td {
+        vertical-align: middle;
+        text-align: center;
+        padding: 12px;
+        border: 1px solid #ddd;
+        overflow-wrap: break-word;
+    }
+
+    .col-sr-no { width: 12.5%; }
+    .col-task { width: 12.5%; }
+    .col-employee { width: 12.5%; }
+    .col-start-date { width: 12.5%; }
+    .col-end-date { width: 12.5%; }
+    .col-status { width: 12.5%; }
+    .col-details { width: 12.5%; }
+    .col-action { width: 12.5%; }
+
+    .table-hover tbody tr:hover {
+        background-color: #e9ecef;
+        transition: background-color 0.2s ease;
+    }
+
+    .badge {
+        font-size: 0.9rem;
+        font-weight: 500;
+        border-radius: 12px;
+        min-width: 90px;
+        display: inline-block;
+    }
+
+    .btn-sm {
+        width: 120px;
+        padding: 6px 12px;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+
+    .btn-sm:hover {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .card {
+        transition: transform 0.2s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Pagination Styles */
+    .pagination {
+        margin-top: 20px;
+    }
+
+    .pagination .page-link {
+        color: #007bff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 8px 12px;
+        transition: all 0.3s ease;
+    }
+
+    .pagination .page-link:hover {
+        background-color: #e9ecef;
+        color: #0056b3;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: #fff;
+    }
+
+    .pagination .page-item.disabled .page-link {
+        color: #6c757d;
+        background-color: #fff;
+        cursor: not-allowed;
+    }
+</style>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<script>
+    let isUpdatingEmployees = false;
+
+    function updateEmployees() {
+        // No department or employee filter for Employee role, so this function is empty
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if ('{{ department_id }}') {
+            updateEmployees();
+        } else {
+            // No initial employee update needed for Employee role
+        }
+
+        // Add event listener for Mark Completed buttons
+        document.querySelectorAll('.mark-completed').forEach(button => {
+            button.addEventListener('click', function() {
+                const assignmentId = this.getAttribute('data-assignment-id');
+                fetch(`{% url 'core:mark_completed' 0 %}`.replace('0', assignmentId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({}),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        location.reload(); // Reload page to reflect updated status
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
+    });
+
+    const ctx = document.getElementById('taskChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Total Tasks', 'Pending', 'In Progress', 'Completed'],
+            datasets: [{
+                label: 'Task Status',
+                data: [{{ task_stats.total }}, {{ task_stats.pending }}, {{ task_stats.in_progress }}, {{ task_stats.completed }}],
+                backgroundColor: [
+                    '#ffc107',
+                    '#ff69b4',
+                    '#28a745',
+                    '#007bff'
+                ],
+                borderWidth: 1,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            },
+            plugins: {
+                legend: { display: true, position: 'top', labels: { font: { size: 12 } } },
+                tooltip: {
+                    callbacks: { label: function(context) { return `${context.label}: ${context.raw}`; } }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

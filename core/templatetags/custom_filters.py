@@ -45,3 +45,7 @@ def mul(value, arg):
         return float(value) * float(arg)
     except (ValueError, TypeError):
         return 0  # Return 0 if multiplication fails
+
+@register.filter
+def split(value, arg):
+    return value.split(arg)

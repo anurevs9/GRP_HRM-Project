@@ -46,7 +46,7 @@
             <i class="bi bi-cash-stack"></i>
             <span>Payroll</span>
           </a>
-          <!-- Accounts -->
+          <!-- Departments -->
           {% if request.user.employee.role.name == 'ADMIN' %}
             <a href="{% url 'core:department_list' %}" class="nav-link {% if 'department' in request.path %}active{% endif %}">
               <i class="bi bi-diagram-3"></i>
@@ -60,7 +60,7 @@
               <span>Recruitment</span>
             </a>
           {% endif %}
-         <!-- **ROLES - ADDED HERE** -->
+          <!-- Roles -->
           {% if request.user.employee.role.name == 'ADMIN' %}
             <a href="{% url 'core:role_list' %}" class="nav-link {% if 'role' in request.path %}active{% endif %}">
               <i class="bi bi-person-gear"></i>
@@ -77,6 +77,23 @@
             <i class="bi bi-bar-chart"></i>
             <span>Reports</span>
           </a>
+          <!-- Role-Specific Task Views -->
+          {% if request.user.employee.role.name == 'ADMIN' %}
+            <a href="{% url 'core:admin_task_view' %}" class="nav-link {% if 'admin_task_view' in request.path %}active{% endif %}">
+              <i class="bi bi-list-task"></i>
+              <span>Admin Tasks</span>
+            </a>
+          {% elif request.user.employee.role.name in 'MANAGER,TEAM_LEADER' %}
+            <a href="{% url 'core:manager_task_view' %}" class="nav-link {% if 'manager_task_view' in request.path %}active{% endif %}">
+              <i class="bi bi-list-task"></i>
+              <span>Manager Tasks</span>
+            </a>
+          {% else %}
+            <a href="{% url 'core:employee_task_view' %}" class="nav-link {% if 'employee_task_view' in request.path %}active{% endif %}">
+              <i class="bi bi-list-task"></i>
+              <span>My Tasks</span>
+            </a>
+          {% endif %}
         </nav>
       </div>
     {% endif %}
@@ -109,7 +126,7 @@
                     {% else %}
                       <i class="bi bi-person-circle fs-5"></i>
                     {% endif %}
-                    <span>{{ request.user.get_full_name }}</span> {# **DISPLAY USER NAME HERE!** #}
+                    <span>{{ request.user.get_full_name }}</span>
                   </button>
                   <ul class="dropdown-menu dropdown-menu-end">
                     <li>
@@ -134,16 +151,26 @@
         {% if messages %}
           {% for message in messages %}
             <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {% if message.tags == 'success' %}
+                <i class="bi bi-check-circle-fill me-2"></i>
+              {% elif message.tags == 'error' %}
+                <i class="bi bi-x-circle-fill me-2"></i>
+              {% elif message.tags == 'warning' %}
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              {% elif message.tags == 'info' %}
+                <i class="bi bi-info-circle-fill me-2"></i>
+              {% else %}
+                <i class="bi bi-bell-fill me-2"></i> <!-- Default icon -->
+              {% endif %}
               {{ message }}
-              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
           {% endfor %}
         {% endif %}
-        <div class="inner-content-wrapper">  <!-- ADD THIS INNER WRAPPER -->
-            {% block content %}
-            {% endblock %}
+        <div class="inner-content-wrapper">
+          {% block content %}
+          {% endblock %}
         </div>
-      </div>
       </div>
     </div>
   </div>
@@ -158,8 +185,18 @@
     document.querySelector('.navbar-toggler')?.addEventListener('click', function() {
       document.querySelector('.sidebar')?.classList.toggle('show');
     });
+
+    // Auto-disappear messages after 3 seconds (adjust as needed)
+    document.addEventListener('DOMContentLoaded', function() {
+      const messages = document.querySelectorAll('.alert');
+      messages.forEach(message => {
+        setTimeout(() => {
+          message.remove(); // Or message.style.display = 'none';
+        }, 3000); // 3000 milliseconds = 3 seconds
+      });
+    });
   </script>
-    {% block extra_js %}
-    {% endblock %}
+  {% block extra_js %}
+  {% endblock %}
 </body>
 </html>

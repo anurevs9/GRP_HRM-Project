@@ -20,11 +20,42 @@ class EmployeeAdmin(admin.ModelAdmin):
     list_filter = ('department', 'role', 'date_joined')
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'employee_id')
 
+class TaskAssignmentStatusFilter(admin.SimpleListFilter):
+    title = 'Assignment Status'
+    parameter_name = 'status'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('PENDING', 'Pending'),
+            ('IN_PROGRESS', 'In Progress'),
+            ('COMPLETED', 'Completed'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(taskassignment_set__status=self.value())
+        return queryset
+
+# Update TaskAdmin to include the custom filter
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ('title', 'assigned_to', 'due_date', 'status')
-    list_filter = ('status', 'due_date')
-    search_fields = ('title', 'description')
+    list_display = ('task_title', 'get_assigned_to', 'start_date', 'end_date', 'get_status')
+    list_filter = ('start_date', 'end_date', TaskAssignmentStatusFilter)
+    search_fields = ('task_title',)
+
+    def get_assigned_to(self, obj):
+        assignment = obj.taskassignment_set.first()
+        return assignment.employee.user.get_full_name if assignment else "Not Assigned"
+    get_assigned_to.short_description = 'Assigned To'
+
+    def get_status(self, obj):
+        assignment = obj.taskassignment_set.first()
+        return assignment.status if assignment else "PENDING"
+    get_status.short_description = 'Status'
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.prefetch_related('taskassignment_set')
 
 @admin.register(Leave)
 class LeaveAdmin(admin.ModelAdmin):

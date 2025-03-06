@@ -262,6 +262,8 @@ body {
 .shadow-sm {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
 }
-
+.filter-button-container {
+    padding-bottom: 0.5rem;
+}
 /* Additional Utility Classes (if needed) */
 /* Adjust as necessary for your project */

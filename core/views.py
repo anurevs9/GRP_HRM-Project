@@ -1,11 +1,12 @@
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, time
 
 import razorpay
 from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import send_mail
+from django.core.paginator import PageNotAnInteger, Paginator, EmptyPage
 from django.db.models import Q, Avg
 from django.db.models.functions import ExtractMonth
 from django.http import JsonResponse, HttpResponse
@@ -45,72 +46,117 @@ def employee_required(view_func):
 
 @employee_required
 def dashboard(request):
-    # ... rest of your view ...
     try:
-        # Access the employee profile within the try block
         employee = request.employee
-        # Get all trainings where the employee is a trainer
         trainer_trainings = employee.trainer_sessions.all()
-        # Get all trainings where the employee is a participant
         participant_trainings = employee.participated_sessions.all()
     except Employee.DoesNotExist:
         messages.warning(request, "Please complete your profile setup.")
-        return redirect('core:profile_setup')  # Redirect to profile setup
+        return redirect('core:profile_setup')
+
+    # Fetch employees for the filter dropdown
+    if request.employee.role.name == 'ADMIN':
+        all_employees = Employee.objects.all()
+        assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').all()
+    elif request.employee.role.name in ['MANAGER', 'TEAM_LEADER']:
+        all_employees = Employee.objects.filter(reporting_manager=request.employee)
+        assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').filter(employee__in=all_employees)
+    else:  # EMPLOYEE
+        all_employees = Employee.objects.filter(id=request.employee.id)
+        assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').filter(employee=request.employee)
+
+    # Apply filters
+    employee_filter = request.GET.get('employee')
+    status_filter = request.GET.get('status')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    print(f"Received filters: employee={employee_filter}, status={status_filter}, date_from={date_from}, date_to={date_to}")  # Debug
+
+    # Store initial count for debugging
+    initial_count = assignments_queryset.count()
+    print(f"Initial task count: {initial_count}")
+
+    if employee_filter:
+        assignments_queryset = assignments_queryset.filter(employee__id=employee_filter)
+    if status_filter:
+        assignments_queryset = assignments_queryset.filter(status=status_filter)
+    if date_from and date_to:
+        try:
+            # Parse the date strings (YYYY-MM-DD format)
+            date_from_dt = datetime.strptime(date_from, '%Y-%m-%d')
+            date_to_dt = datetime.strptime(date_to, '%Y-%m-%d')
+
+            # Create timezone-aware datetime objects
+            date_from_start = timezone.make_aware(datetime.combine(date_from_dt, time.min))  # 00:00:00
+            date_to_end = timezone.make_aware(datetime.combine(date_to_dt, time.max))  # 23:59:59.999999
+
+            print(f"Filtering with range: {date_from_start} to {date_to_end}")  # Debug
+            assignments_queryset = assignments_queryset.filter(assigned_date__range=[date_from_start, date_to_end])
+
+            # Debug: Print the tasks after filtering
+            filtered_tasks = assignments_queryset.values('assignment_id', 'task__task_title', 'assigned_date')
+            print(f"Filtered tasks: {list(filtered_tasks)}")
+            print(f"Filtered task count: {assignments_queryset.count()}")
+        except ValueError as e:
+            messages.error(request, f"Invalid date format for Date From or Date To. Please use YYYY-MM-DD. Error: {str(e)}")
+    elif date_from or date_to:
+        messages.warning(request, "Please provide both Date From and Date To for date filtering.")
+
+    # Add ordering to avoid UnorderedObjectListWarning
+    assignments_queryset = assignments_queryset.order_by('assigned_date')
+
+    # Pagination
+    paginator = Paginator(assignments_queryset, 5)  # 5 items per page
+    page = request.GET.get('page')
+    try:
+        assignments = paginator.page(page)
+    except PageNotAnInteger:
+        assignments = paginator.page(1)
+    except EmptyPage:
+        assignments = paginator.page(paginator.num_pages)
+
+    status_choices = ['PENDING', 'IN_PROGRESS', 'COMPLETED']
+
     context = {
         'today': timezone.now(),
-        'total_employees': Employee.objects.count(), # No change, model query
-        'total_departments': Department.objects.count(), # No change, model query
-        'open_positions': Recruitment.objects.filter(status='OPEN').count(), # No change
-        'pending_leaves': Leave.objects.filter(status='PENDING').count(),# No change
-        'recent_tasks': Task.objects.filter(assigned_to=request.employee).order_by('-due_date')[:5], # No change
-        'upcoming_trainings': Training.objects.filter(
-            start_date__gte=timezone.now()
-        ).order_by('start_date')[:3], # No change
-        'today_attendance': Attendance.objects.filter(
-            employee=request.employee,
-            date=timezone.now().date()
-        ).first(), # No change
-        'leave_balance': { # This should ideally come from a model or calculation
+        'total_employees': Employee.objects.count(),
+        'total_departments': Department.objects.count(),
+        'open_positions': Recruitment.objects.filter(status='OPEN').count(),
+        'pending_leaves': Leave.objects.filter(status='PENDING').count(),
+        'upcoming_trainings': Training.objects.filter(start_date__gte=timezone.now()).order_by('start_date')[:3],
+        'today_attendance': Attendance.objects.filter(employee=request.employee, date=timezone.now().date()).first(),
+        'leave_balance': {
             'annual': 20,
             'sick': 10,
             'casual': 5
         },
-        'announcements': [],  # Replace with your announcements logic
+        'announcements': [],
         'trainer_trainings': trainer_trainings,
         'participant_trainings': participant_trainings,
+        'assignments': assignments,
+        'all_employees': all_employees,
+        'status_choices': status_choices,
+        'employee_filter': employee_filter,
+        'status_filter': status_filter,
+        'date_from': date_from,
+        'date_to': date_to,
     }
 
-    # Get performance data for charts (example, adapt to your needs)
-    performance_data = Performance.objects.filter(
-        employee=request.employee
-    ).order_by('review_date')
-
-    # Calculate monthly average ratings (example)
-    monthly_ratings = Performance.objects.filter(
-        employee=request.employee
-    ).annotate(
+    # Performance data
+    performance_data = Performance.objects.filter(employee=request.employee).order_by('review_date')
+    monthly_ratings = Performance.objects.filter(employee=request.employee).annotate(
         month=ExtractMonth('review_date')
-    ).values('month').annotate(
-        avg_rating=Avg('rating')
-    ).order_by('month')
-
-    # Prepare data for charts
-    performance_labels = [p.review_date.strftime('%b %Y') for p in performance_data]
-    performance_values = [p.rating for p in performance_data]
-
-    monthly_labels = [f"Month {data['month']}" for data in monthly_ratings]
-    monthly_values = [float(data['avg_rating']) for data in monthly_ratings]
-
-
+    ).values('month').annotate(avg_rating=Avg('rating')).order_by('month')
 
     context.update({
-        'performance_labels': performance_labels,
-        'performance_values': performance_values,
-        'monthly_labels': monthly_labels,
-        'monthly_values': monthly_values,
+        'performance_labels': [p.review_date.strftime('%b %Y') for p in performance_data],
+        'performance_values': [p.rating for p in performance_data],
+        'monthly_labels': [f"Month {data['month']}" for data in monthly_ratings],
+        'monthly_values': [float(data['avg_rating']) for data in monthly_ratings],
     })
-    return render(request, 'hrm/dashboard.html', context) # Assuming core/dashboard.html
 
+    return render(request, 'hrm/dashboard.html', context)
 
 @employee_required
 def employee_list(request):
@@ -121,16 +167,6 @@ def employee_list(request):
 
     employees = Employee.objects.select_related('user', 'department', 'role').all()
     return render(request, 'hrm/employee_list.html', {'employees': employees}) # Assuming core/employee_list.html
-
-
-@employee_required
-def task_list(request):
-    # Example of role-based access (adjust roles as needed)
-    if request.employee.role.name in ['ADMIN', 'MANAGER', 'TEAM_LEADER']:
-        tasks = Task.objects.all()  # Admin/Manager/Team Leader can see all tasks
-    else:
-        tasks = Task.objects.filter(assigned_to=request.employee)  # Employees see their own tasks
-    return render(request, 'hrm/task_list.html', {'tasks': tasks}) # Assuming core/task_list.html
 
 
 from django.shortcuts import render, redirect
@@ -254,7 +290,7 @@ def profile_setup(request):
 @login_required
 def user_logout(request):
     logout(request)
-    messages.success(request, 'You have been logged out successfully.')
+    messages.success(request, 'You have been logged out successfully.', extra_tags='logout-success')
     return redirect('core:login_register')
 
 @login_required
@@ -361,34 +397,396 @@ def delete_employee(request, employee_id):
 
     return redirect('core:employee_list')
 
+logger = logging.getLogger(__name__) # Get logger
+
+@employee_required
+def employee_performance_detail(request, employee_id):
+    employee = get_object_or_404(Employee, pk=employee_id)
+    performance_reviews = Performance.objects.filter(employee=employee).order_by('-review_date') # Get all reviews for this employee
+
+    logger.debug(f"Fetched performance_reviews for employee_id {employee_id}: {performance_reviews}") # Debug log
+
+    for review in performance_reviews:
+        logger.debug(f"Review ID: {review.id}")
+
+    context = {
+        'employee': employee,
+        'performance_reviews': performance_reviews,
+    }
+    return render(request, 'hrm/employee_performance_detail.html', context) # Create this template
+
+@employee_required # Assuming you want employee_required
+def performance_review_detail(request, performance_id):
+    performance = get_object_or_404(Performance, pk=performance_id) # Fetch the specific Performance object
+    context = {
+        'performance': performance,
+    }
+    return render(request, 'hrm/performance_review_list.html', context)
+
 
 @employee_required
 def add_task(request):
+    if request.employee.role.name not in ['ADMIN', 'MANAGER', 'TEAM_LEADER']:
+        messages.error(request, 'You do not have permission to create tasks.')
+        return redirect('core:task_list')
+
     if request.method == 'POST':
-        form = TaskForm(request.POST)
-        if form.is_valid():
-            task = form.save(commit=False)
-            task.assigned_by = request.user  # Assigned by the current user
-            task.save()
-            messages.success(request, 'Task created successfully.')
-            return redirect('core:task_list')
-    else:
-        form = TaskForm()
-    return render(request, 'hrm/add_task.html', {'form': form}) # Assuming core/add_task.html
+        task_form = TaskForm(request.POST)
+        assignment_form = TaskAssignmentForm(request.user, request.POST)
+
+        if task_form.is_valid() and assignment_form.is_valid():
+            task = task_form.save()  # First save the Task
+
+            assignment = assignment_form.save(commit=False)  # Get TaskAssignment instance without saving yet
+            assignment.task = task  # Link to the Task we just saved
+            assignment.assigned_by = request.user  # Use request.user (User instance)
+            assignment.save()  # Now save TaskAssignment with task and assigned_by set
+
+            messages.success(request, 'Task created and assigned successfully.')
+            return redirect('core:manager_task_view')  # Redirect to manager view for consistency
+        else:
+            messages.error(request, 'There was an error in the form. Please correct it.')
+    else:  # GET request
+        task_form = TaskForm()
+        assignment_form = TaskAssignmentForm(request.user)
+
+    context = {'task_form': task_form, 'assignment_form': assignment_form}
+    return render(request, 'hrm/add_task.html', context)
+
 
 @employee_required
 def update_task(request, task_id):
-    task = get_object_or_404(Task, id=task_id)
-    if request.method == 'POST':
-        form = TaskForm(request.POST, instance=task)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Task updated successfully.')
-            return redirect('core:task_list')
-    else:
-        form = TaskForm(instance=task)
-    return render(request, 'hrm/update_task.html', {'form': form, 'task': task}) # Assuming core/update_task.html
+    task = get_object_or_404(Task, task_id=task_id)
+    assignment = get_object_or_404(TaskAssignment, task=task)
 
+    if request.method == 'POST':
+        task_form = TaskForm(request.POST, instance=task)
+        assignment_form = TaskAssignmentForm(request.user, request.POST, instance=assignment)
+
+        if task_form.is_valid() and assignment_form.is_valid():
+            # Save the task first
+            task = task_form.save()
+
+            # Update the existing assignment instead of creating a new one
+            assignment = assignment_form.save(commit=False)
+            assignment.task = task  # Ensure the task reference is updated
+            assignment.assigned_by = request.user  # Update assigned_by if needed
+            assignment.save()  # Save the existing assignment
+
+            messages.success(request, 'Task updated successfully.')
+            return redirect('core:manager_task_view')  # Redirect to manager_task_view for consistency
+        else:
+            messages.error(request, 'There was an error updating the task. Please correct the form.')
+    else:
+        task_form = TaskForm(instance=task)
+        assignment_form = TaskAssignmentForm(request.user, instance=assignment)
+
+    context = {
+        'task_form': task_form,
+        'assignment_form': assignment_form,
+        'task': task,
+        'assignment': assignment  # Pass assignment to context for debugging or display
+    }
+    return render(request, 'hrm/update_task.html', context)
+
+# core/views.py
+@employee_required
+def task_detail(request, assignment_id):
+    assignment = get_object_or_404(TaskAssignment, assignment_id=assignment_id)
+    context = {
+        'assignment': assignment,
+        'task_stats': {
+            'total': TaskAssignment.objects.filter(task=assignment.task).count(),  # Total assignments for this task
+            'completed': TaskAssignment.objects.filter(task=assignment.task, status='COMPLETED').count(),
+            'in_progress': TaskAssignment.objects.filter(task=assignment.task, status='IN_PROGRESS').count(),
+            'pending': TaskAssignment.objects.filter(task=assignment.task, status='PENDING').count(),
+        }
+    }
+    return render(request, 'hrm/task_detail.html', context)
+
+@employee_required
+def delete_task(request, task_id):
+    print(f"delete_task view called with task_id: {task_id}")  # Debug print
+
+    task = get_object_or_404(Task, task_id=task_id)
+    print(f"Task to be deleted: {task.task_title}") # Debug print
+
+    if request.method == 'POST':
+        try:
+            assignment = get_object_or_404(TaskAssignment, task=task)
+            print(f"Deleting task assignment: {assignment}") # Debug print
+            assignment.delete()
+
+            print(f"Deleting task: {task.task_title}") # Debug print
+            task.delete()
+
+            messages.success(request, 'Task deleted successfully.')
+            return redirect('core:task_list')  # Redirect back to the task list
+
+        except TaskAssignment.DoesNotExist:
+            print("TaskAssignment does not exist.")  # Should not happen, but good to check
+            messages.error(request, 'Task assignment does not exist')
+            return redirect('core:task_list')
+        except Exception as e:
+            print(f"An error occurred during deletion: {e}")
+            messages.error(request, f"An error occurred: {e}")
+            return redirect('core:task_list')
+
+    else:
+        print("GET request to delete_task - not allowed") # DEBUG
+        messages.error(request,"Deletion is not allowed via GET request.")
+        return redirect('core:task_list')
+
+
+
+@employee_required
+def get_employees_by_department(request):
+    if request.method == 'GET' and request.headers.get('X-Requested-With') == 'XMLHttpRequest': # Check for AJAX
+        department_id = request.GET.get('department_id')
+        if department_id:
+            employees = Employee.objects.filter(department_id=department_id).select_related('user')
+            employee_list = [
+                {
+                    'id': emp.id,
+                    'user__get_full_name': emp.user.get_full_name() if emp.user.get_full_name() else 'Unnamed Employee'
+                }
+                for emp in employees
+            ]
+            return JsonResponse({'employees': employee_list})
+        return JsonResponse({'employees': []})
+    return JsonResponse({'error': 'Invalid request'}, status=400) # Return 400 for non-AJAX or non-GET
+
+
+@employee_required
+def admin_task_view(request):
+    if not request.user.is_authenticated:
+        messages.error(request, 'You must be logged in to view this page.')
+        return redirect('core:login_register')
+
+    # Restrict access to ADMIN role
+    if request.employee.role.name != 'ADMIN':
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('core:task_list')
+
+    # Fetch departments
+    departments = Department.objects.all()
+
+    # Fetch filter values from the request
+    department_id = request.GET.get('department')
+    employee_filter = request.GET.get('employee')
+    status_filter = request.GET.get('status')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    # Get all employees (unfiltered for the initial context)
+    all_employees = Employee.objects.select_related('user').all()
+
+    # Filter employees for the form based on department_id
+    employees = all_employees
+    if department_id:
+        employees = employees.filter(department_id=department_id)
+
+    # Fetch task assignments with filtering (unpaginated queryset for stats)
+    assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').all()
+
+    if department_id:
+        assignments_queryset = assignments_queryset.filter(employee__department_id=department_id)
+    if employee_filter:
+        assignments_queryset = assignments_queryset.filter(employee__id=employee_filter)
+    if status_filter:
+        assignments_queryset = assignments_queryset.filter(status=status_filter)
+    if date_from and date_to:
+        assignments_queryset = assignments_queryset.filter(assigned_date__range=[date_from, date_to])
+
+    # Task statistics (calculated on unpaginated queryset)
+    task_stats = {
+        'total': assignments_queryset.count(),
+        'completed': assignments_queryset.filter(status='COMPLETED').count(),
+        'in_progress': assignments_queryset.filter(status='IN_PROGRESS').count(),
+        'pending': assignments_queryset.filter(status='PENDING').count(),
+    }
+
+    # Pagination
+    paginator = Paginator(assignments_queryset, 5)  # 5 items per page
+    page = request.GET.get('page')
+    try:
+        assignments = paginator.page(page)
+    except PageNotAnInteger:
+        assignments = paginator.page(1)
+    except EmptyPage:
+        assignments = paginator.page(paginator.num_pages)
+
+    context = {
+        'today': timezone.now(),
+        'assignments': assignments,
+        'task_stats': task_stats,
+        'departments': departments,
+        'employees': employees,
+        'all_employees': all_employees,
+        'department_id': department_id,
+        'employee_filter': employee_filter,
+        'status_filter': status_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'status_choices': ['PENDING', 'IN_PROGRESS', 'COMPLETED'],
+    }
+
+    return render(request, 'hrm/admin_task_view.html', context)
+
+@employee_required
+def manager_task_view(request):
+    if request.employee.role.name not in ['MANAGER', 'TEAM_LEADER', 'ADMIN']:
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('core:task_list')
+
+    # Fetch departments for filtering
+    departments = Department.objects.all()
+
+    # Fetch filter values from the request
+    department_id = request.GET.get('department')
+    employee_filter = request.GET.get('employee')
+    status_filter = request.GET.get('status')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    # Get all reporting employees (unfiltered for the initial context)
+    if request.employee.role.name == 'ADMIN':
+        all_employees = Employee.objects.all().select_related('user')
+    else:
+        all_employees = Employee.objects.filter(reporting_manager=request.employee).select_related('user')
+
+    # Filter employees for the form based on department_id
+    employees = all_employees
+    if department_id:
+        employees = employees.filter(department_id=department_id)
+
+    # Fetch task assignments for reporting employees with filtering (unpaginated queryset for stats)
+    if request.employee.role.name == 'ADMIN':
+        assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').all().distinct()
+    else:
+        assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').filter(
+            employee__in=all_employees
+        ).distinct()
+
+    if department_id:
+        assignments_queryset = assignments_queryset.filter(employee__department_id=department_id)
+    if employee_filter:
+        assignments_queryset = assignments_queryset.filter(employee__id=employee_filter)
+    if status_filter:
+        assignments_queryset = assignments_queryset.filter(status=status_filter)
+    if date_from and date_to:
+        assignments_queryset = assignments_queryset.filter(assigned_date__range=[date_from, date_to])
+
+    # Task statistics (calculated on unpaginated queryset)
+    task_stats = {
+        'total': assignments_queryset.count(),
+        'completed': assignments_queryset.filter(status='COMPLETED').count(),
+        'in_progress': assignments_queryset.filter(status='IN_PROGRESS').count(),
+        'pending': assignments_queryset.filter(status='PENDING').count(),
+    }
+
+    # Pagination
+    paginator = Paginator(assignments_queryset, 5)  # 5 items per page
+    page = request.GET.get('page')
+    try:
+        assignments = paginator.page(page)
+    except PageNotAnInteger:
+        assignments = paginator.page(1)
+    except EmptyPage:
+        assignments = paginator.page(paginator.num_pages)
+
+    context = {
+        'today': timezone.now(),
+        'assignments': assignments,
+        'task_stats': task_stats,
+        'departments': departments,
+        'employees': employees,
+        'all_employees': all_employees,
+        'department_id': department_id,
+        'employee_filter': employee_filter,
+        'status_filter': status_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'status_choices': ['PENDING', 'IN_PROGRESS', 'COMPLETED'],
+    }
+
+    return render(request, 'hrm/manager_task_view.html', context)
+
+@employee_required
+def employee_task_view(request):
+    if request.employee.role.name != 'EMPLOYEE':
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('core:task_list')
+
+    # Fetch filter values from the request
+    status_filter = request.GET.get('status')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    # Fetch only the current employee's assignments (unpaginated queryset for stats)
+    assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').filter(employee=request.employee)
+
+    # Apply filters
+    if status_filter:
+        assignments_queryset = assignments_queryset.filter(status=status_filter)
+    if date_from and date_to:
+        assignments_queryset = assignments_queryset.filter(assigned_date__range=[date_from, date_to])
+
+    # Task statistics (calculated on unpaginated queryset)
+    task_stats = {
+        'total': assignments_queryset.count(),
+        'completed': assignments_queryset.filter(status='COMPLETED').count(),
+        'in_progress': assignments_queryset.filter(status='IN_PROGRESS').count(),
+        'pending': assignments_queryset.filter(status='PENDING').count(),
+    }
+
+    # Pagination
+    paginator = Paginator(assignments_queryset, 5)  # 5 items per page
+    page = request.GET.get('page')
+    try:
+        assignments = paginator.page(page)
+    except PageNotAnInteger:
+        assignments = paginator.page(1)
+    except EmptyPage:
+        assignments = paginator.page(paginator.num_pages)
+
+    context = {
+        'today': timezone.now(),
+        'assignments': assignments,
+        'task_stats': task_stats,
+        'status_filter': status_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'status_choices': ['PENDING', 'IN_PROGRESS', 'COMPLETED'],
+    }
+
+    return render(request, 'hrm/employee_task_view.html', context)
+
+@employee_required
+@require_POST
+def mark_completed(request, assignment_id):
+    try:
+        assignment = get_object_or_404(TaskAssignment, assignment_id=assignment_id)
+        is_admin = request.employee.role.name == 'ADMIN'
+        is_manager_or_leader = request.employee.role.name in ['MANAGER', 'TEAM_LEADER']
+        is_reporting_manager = assignment.employee.reporting_manager == request.employee
+
+        if is_admin or (is_manager_or_leader and is_reporting_manager):
+            if assignment.status != 'COMPLETED':
+                assignment.status = 'COMPLETED'
+                assignment.completed_at = timezone.now()
+                assignment.save()
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Task marked as completed',
+                    'completed_at': timezone.now().strftime('%d-%m-%Y %H:%M')
+                })
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Task already completed'}, status=400)
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 @user_passes_test(is_admin) # Use the test function
@@ -805,7 +1203,7 @@ def login_register_view(request):
                 user = login_form.get_user()
                 if user is not None:
                     login(request, user)
-                    messages.success(request, 'Login successful!')
+                    messages.success(request, 'Login successful!', extra_tags='login-success')
                     return redirect('core:dashboard')
                 else:
                     messages.error(request, 'Login failed. Please check your credentials.')

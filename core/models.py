@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+
 
 class Department(models.Model):
     name = models.CharField(max_length=100)
@@ -49,22 +51,44 @@ class Employee(models.Model):
         return self.user.get_full_name()
 
 class Task(models.Model):
-    STATUS_CHOICES = (
-        ('PENDING', 'Pending'),
-        ('IN_PROGRESS', 'In Progress'),
-        ('COMPLETED', 'Completed'),
-    )
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    assigned_to = models.ForeignKey(Employee, on_delete=models.CASCADE)
-    assigned_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    due_date = models.DateField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    task_id = models.AutoField(primary_key=True)
+    task_title = models.CharField(max_length=100)
+    task_description = models.CharField(max_length=200)
+    task_priority = models.CharField(max_length=200, choices=(('HIGH', 'High'), ('MEDIUM', 'Medium'), ('LOW', 'Low')), default='MEDIUM')
+    start_date = models.DateField()
+    end_date = models.DateField()
+    task_type = models.CharField(max_length=50, choices=(('INDIVIDUAL', 'Individual'), ('TEAM', 'Team')), default='INDIVIDUAL')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.title
+        return self.task_title
+
+    def save(self, *args, **kwargs):
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError("End date cannot be earlier than start date.")
+        super().save(*args, **kwargs)
+
+class TaskAssignment(models.Model):
+    assignment_id = models.AutoField(primary_key=True)  # Unique identification of task assignment
+    task = models.ForeignKey(Task, on_delete=models.CASCADE)  # Reference of id column in task table
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)  # Reference of id column in employee table
+    assigned_by = models.ForeignKey(User, on_delete=models.CASCADE)  # Reference of the id column in employee table who assigns
+    assigned_date = models.DateTimeField(auto_now_add=True)  # Timestamp at which task is assigned
+    status = models.CharField(max_length=200, choices=(
+        ('PENDING', 'Pending'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('COMPLETED', 'Completed'),
+    ), default='PENDING')  # Status of the task
+    completed_at = models.DateTimeField(null=True, blank=True)  # Timestamp at which the task is marked completed
+
+    def __str__(self):
+        return f"Assignment {self.assignment_id} for {self.task.task_title}"
+
+    def save(self, *args, **kwargs):
+        if self.status == 'COMPLETED' and not self.completed_at:
+            self.completed_at = timezone.now()
+        super().save(*args, **kwargs)
 
 class Leave(models.Model):
     LEAVE_TYPES = (

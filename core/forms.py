@@ -6,10 +6,11 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
+from django.contrib.auth import authenticate, login
 
 from .models import (
     Employee, Department, Role, Task, Leave, Performance,
-    Recruitment, Candidate, Training, Payroll, Attendance
+    Recruitment, Candidate, Training, Payroll, Attendance, TaskAssignment
 )
 
 
@@ -109,12 +110,54 @@ class EmployeeForm(forms.ModelForm):
 class TaskForm(forms.ModelForm):
     class Meta:
         model = Task
-        fields = ['title', 'description', 'assigned_to', 'due_date', 'status']
+        fields = ['task_title', 'task_description', 'task_priority', 'start_date', 'end_date', 'task_type']
         widgets = {
-            'due_date': forms.DateInput(attrs={'type': 'date'}),
-            'description': forms.Textarea(attrs={'rows': 4})
+            'task_title': forms.TextInput(attrs={'class': 'form-control'}),
+            'task_description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'task_priority': forms.Select(attrs={'class': 'form-control'}),
+            'start_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'end_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'task_type': forms.Select(attrs={'class': 'form-control'}),
         }
 
+class TaskAssignmentForm(forms.ModelForm):
+    class Meta:
+        model = TaskAssignment
+        fields = ['employee', 'status']  # Removed 'task' and 'assigned_by' from fields
+        widgets = {
+            'employee': forms.Select(attrs={'class': 'form-control'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        print("TaskAssignmentForm __init__ called for user:", user.username if user else "None")  # Debug user
+        print("Request user authenticated:", user.is_authenticated)  # Debug authentication
+
+        if user and user.is_authenticated:
+            try:
+                logged_in_employee = user.employee
+                print("Logged-in employee found:", logged_in_employee)  # Debug employee
+                print("Logged-in employee role:", logged_in_employee.role.name if logged_in_employee.role else "None")  # Debug role
+                if logged_in_employee.role.name == 'ADMIN':
+                    print("User is ADMIN - setting all employees")
+                    self.fields['employee'].queryset = Employee.objects.all()
+                    print("Employee queryset count for ADMIN:", Employee.objects.all().count())  # Debug count
+                elif logged_in_employee.role.name in ['MANAGER', 'TEAM_LEADER']:
+                    reporting_employees = Employee.objects.filter(reporting_manager=logged_in_employee)
+                    print("User is Manager/Team Leader - setting reporting employees")
+                    print("Reporting employees queryset:", reporting_employees.query)  # Debug SQL query
+                    print("Reporting employees count:", reporting_employees.count())  # Debug count
+                    self.fields['employee'].queryset = reporting_employees
+                else:
+                    print("User is EMPLOYEE or other role - setting empty queryset")
+                    self.fields['employee'].queryset = Employee.objects.none()
+            except Employee.DoesNotExist:
+                print("Employee.DoesNotExist for user:", user.username)  # Debug
+                self.fields['employee'].queryset = Employee.objects.none()
+        else:
+            print("User not authenticated or None - setting empty queryset")
+            self.fields['employee'].queryset = Employee.objects.none()
 
 class DepartmentForm(forms.ModelForm):
     class Meta:
@@ -335,9 +378,7 @@ class LeaveRequestForm(forms.ModelForm):
         return cleaned_data
 
 
-from django.contrib.auth import authenticate, login
-from django.contrib.auth.forms import AuthenticationForm
-from django import forms
+
 
 class LoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
