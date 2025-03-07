@@ -21,6 +21,42 @@ This project is a web-based **Human Resources Management System (HRMS)** built u
 - Departments are linked to employees.
 - Admin-only access for department creation and editing.
 
+## Task Management System
+
+### Task Creation and Assignment
+
+- **Task Priority**: A dropdown menu with options: High, Medium, and Low.
+- **Assigned To**: Contains the name of the employee to whom the Team Leader, Manager, or Admin wants to assign the task. The dropdown must show only those employees who are reporting to the logged-in user.
+- **Task Type**: A dropdown with two options: Individual and Team.
+
+### Dashboard Admin
+
+- **Create Task Button**: Allows the user to create a task and assign it to team members. After creating the task, the user returns to the dashboard.
+- **Pagination**: Displays 10 records per screen.
+- **Filter by Employee**: Filters tasks to be shown as per the selected employee. The dropdown contains only names of those employees who are reporting to the logged-in user.
+- **Filter by Status**: Filters tasks as per the status such as Pending, Completed, and In Progress.
+- **See Details Button**: Provides users with a detailed view of the task along with its description.
+- **Filter Between Date Ranges**: Works on the start date filter and displays records based on the dates provided in the To and From section.
+- **Statistical Section**: Shows the number of completed tasks, pending tasks, and in-progress tasks with respect to the selection either for specific employees or for all employees.
+- **Multiple Filters Selection**: Supports multiple filter selections. For example, if a specific employee is selected by the user (Team Leader/Manager/Admin) and the user also clicks on the completed option from the Filter by Status, the dashboard must show the selected employee's completed tasks.
+
+### Dashboard Manager/Team Leader
+
+- Similar functionalities as the Admin Dashboard with appropriate access controls.
+
+### Employee Dashboard
+
+- Displays tasks assigned to the logged-in employee with options to update task status and view task details.
+
+### Update Task Details
+
+- When the User (Admin/TL/Manager) clicks on the edit button, it opens a view to update task details such as Task Title, Task Description, Assigned To, Task Priority, Start Date, End Date, and Task Type.
+- After updating task details, the user is directed back to the dashboard.
+
+### Delete Task
+
+- When the User (Admin/TL/Manager) clicks on the delete button, a pop-up provides a warning for deletion with a confirm button to delete the task.
+
 ### Recruitment
 
 - Employees can create new job postings.
