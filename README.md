@@ -4,18 +4,18 @@ This project is a web-based **Human Resources Management System (HRMS)** built u
 
 ## Features
 
-### User Authentication
+## User Authentication
 
 - Login and registration functionality for employees.
 - Uses Django's built-in authentication system.
 - Distinct user roles (e.g., employee, payroll administrator) implemented using custom decorators and permission checks.
 
-### Employee Management
+## Employee Management
 
 - CRUD (Create, Read, Update, Delete) operations for employee records.
 - Employee profiles with details like name, email, phone, department, etc.
 
-### Department Management
+## Department Management
 
 - CRUD operations for departments.
 - Departments are linked to employees.
@@ -57,12 +57,12 @@ This project is a web-based **Human Resources Management System (HRMS)** built u
 
 - When the User (Admin/TL/Manager) clicks on the delete button, a pop-up provides a warning for deletion with a confirm button to delete the task.
 
-### Recruitment
+## Recruitment
 
 - Employees can create new job postings.
 - Application status tracking (e.g., open, closed, pending).
 
-### Payroll
+## Payroll
 
 - Payroll record creation, including basic salary, overtime, bonuses, and deductions.
 - Calculation of net salary.
@@ -70,24 +70,24 @@ This project is a web-based **Human Resources Management System (HRMS)** built u
 - Automated email notifications to employees upon successful payment, including a detailed salary breakdown (using HTML email templates).
 - Role-based access control to restrict payroll processing to authorized personnel.
 
-### User Roles and Permissions
+## User Roles and Permissions
 
 - Expanded role-based permissions using Django's framework or `django-guardian`.
 
-### Reporting
+## Reporting
 
 - Generate reports on employee data, payroll, and recruitment.
 
-### Dashboard
+## Dashboard
 
 - Displays key metrics and summaries.
 
-### Leave Management
+## Leave Management
 
 - Employees can request and manage leave.
 - Approval system for HR and managers.
 
-### Performance Management
+## Performance Management
 
 - Performance reviews and goal-setting features.
 
