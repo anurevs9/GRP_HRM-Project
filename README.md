@@ -70,6 +70,27 @@ This project is a web-based **Human Resources Management System (HRMS)** built u
 - Automated email notifications to employees upon successful payment, including a detailed salary breakdown (using HTML email templates).
 - Role-based access control to restrict payroll processing to authorized personnel.
 
+## Performance Management System
+
+### Add a Review
+
+- This functionality is accessed by Admin/TL/Manager to add review details when a review is being conducted with the team members.
+- **Select Employee**: A dropdown that shows a list of only those employees who are reporting to the logged-in Admin/Manager/TL.
+- **Review Period**: Contains three options: Monthly, Quarterly, and Annual.
+
+### Admin Dashboard
+
+- Access to all performance reviews and ability to manage them.
+
+### Manager/TL Dashboard
+
+- Similar functionalities as the Admin Dashboard with appropriate access controls.
+
+### Employee Review Dashboard
+
+- Displays performance reviews for the logged-in employee.
+
+
 ## User Roles and Permissions
 
 - Expanded role-based permissions using Django's framework or `django-guardian`.
