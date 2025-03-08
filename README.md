@@ -108,10 +108,6 @@ This project is a web-based **Human Resources Management System (HRMS)** built u
 - Employees can request and manage leave.
 - Approval system for HR and managers.
 
-## Performance Management
-
-- Performance reviews and goal-setting features.
-
 ## Project Structure
 
 The project follows a standard **Django** structure:
