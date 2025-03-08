@@ -15,12 +15,18 @@ urlpatterns = [
     path('login-register/', views.login_register_view, name='login_register'),
     path('tasks/', RedirectView.as_view(url=reverse_lazy('core:admin_task_view')), name='task_list'),
     path('leave-request/', views.leave_request, name='leave_request'),
-    path('performance-review/<int:employee_id>/', views.performance_review, name='performance_review'),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('verify-otp/', views.verify_otp, name='verify_otp'),
     path('reset-password/', views.reset_password, name='reset_password'),
     path('employee/<int:employee_id>/performance/', views.employee_performance_detail,name='employee_performance_detail'),
+    # New Performance Management URLs
     path('performance-reviews/<int:performance_id>/', views.performance_review_detail, name='performance_review_detail'),
+    path('performance-review/', views.performance_review, name='performance_review'),
+    path('admin-performance-view/', views.admin_performance_view, name='admin_performance_view'),
+    path('manager-performance-view/', views.manager_performance_view, name='manager_performance_view'),
+    path('employee-review-dashboard/', views.employee_review_dashboard, name='employee_review_dashboard'),
+    path('performance-review-edit/<int:performance_id>/', views.performance_review_edit, name='performance_review_edit'),
+    path('performance-review-delete/<int:performance_id>/', views.performance_review_delete, name='performance_review_delete'),
 
     # Employee management URLs
     path('employee/add/', views.add_employee, name='add_employee'),

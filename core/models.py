@@ -113,25 +113,45 @@ class Leave(models.Model):
     def __str__(self):
         return f"{self.employee} - {self.leave_type}"
 
+# Define a default function for review_date
+def get_default_review_date():
+    return timezone.now().date()
+
 class Performance(models.Model):
     RATING_CHOICES = (
-        (1, 'Poor'),
-        (2, 'Below Average'),
-        (3, 'Average'),
-        (4, 'Good'),
-        (5, 'Excellent'),
+        (1, '1 - Poor'),
+        (2, '2'),
+        (3, '3'),
+        (4, '4'),
+        (5, '5'),
+        (6, '6'),
+        (7, '7'),
+        (8, '8'),
+        (9, '9'),
+        (10, '10 - Excellent'),
     )
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
-    review_period = models.CharField(max_length=50)  # e.g., "Q1 2024"
+    REVIEW_PERIOD_CHOICES = (
+        ('MONTHLY', 'Monthly'),
+        ('QUARTERLY', 'Quarterly'),
+        ('ANNUAL', 'Annual'),
+    )
+    employee = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='performance_reviews')
+    review_title = models.CharField(max_length=100)
+    review_period = models.CharField(max_length=50, choices=REVIEW_PERIOD_CHOICES)
     rating = models.IntegerField(choices=RATING_CHOICES)
-    feedback = models.TextField()
-    goals = models.TextField()
-    reviewed_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    review_date = models.DateField()
+    feedback = models.TextField(max_length=300)  # Changed to TextField for multi-line input
+    reviewed_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviewed_performances')
+    review_date = models.DateField(default=get_default_review_date)  # Use the callable function
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.employee} - {self.review_period}"
+        return f"{self.employee.user.get_full_name()} - {self.review_period} - {self.review_title}"
+
+    class Meta:
+        verbose_name = "Performance Review"
+        verbose_name_plural = "Performance Reviews"
+        ordering = ['-review_date']
 
 
 class Recruitment(models.Model):

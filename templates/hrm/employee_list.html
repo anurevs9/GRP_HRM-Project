@@ -44,7 +44,7 @@
                             <td>{{ employee.reporting_manager.user.get_full_name|default:"N/A" }}</td>
                             <td>{{ employee.date_joined }}</td>
                             <td>
-                                <a href="{% url 'core:performance_review' employee.id %}" class="btn btn-sm btn-info">
+                                <a href="{% url 'core:performance_review' %}" class="btn btn-sm btn-info">
                                     <i class="bi bi-star"></i> Review
                                 </a>
                                 {% if request.user.employee.role.name in 'PAYROLL_ADMIN_ROLES' %}

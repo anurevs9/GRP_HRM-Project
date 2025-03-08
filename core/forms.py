@@ -23,10 +23,6 @@ class RegisterForm(UserCreationForm):
         model = User
         fields = UserCreationForm.Meta.fields + ("email", "first_name", "last_name")
 
-# class LoginForm(AuthenticationForm):  # Use AuthenticationForm for login
-#     """Base class for authenticating users."""
-#     pass
-
 
 class UserForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput, required=False, label="New Password (leave blank to keep current)")
@@ -227,14 +223,23 @@ class RoleForm(forms.ModelForm):
         }
 
 
+
 class PerformanceReviewForm(forms.ModelForm):
     class Meta:
         model = Performance
-        fields = ['review_period', 'rating', 'feedback', 'goals']
+        fields = ['review_title', 'review_date', 'review_period', 'rating', 'feedback']
         widgets = {
-            'review_period': forms.TextInput(attrs={
+            'review_title': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'e.g., Q1 2025'
+                'placeholder': 'Enter review title'
+            }),
+            'review_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+                'placeholder': 'dd/mm/yyyy'
+            }),
+            'review_period': forms.Select(attrs={
+                'class': 'form-control'
             }),
             'rating': forms.Select(attrs={
                 'class': 'form-control'
@@ -242,14 +247,15 @@ class PerformanceReviewForm(forms.ModelForm):
             'feedback': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 4,
-                'placeholder': 'Provide detailed feedback...'
+                'placeholder': 'Enter review comment (max 300 characters)...'
             }),
-            'goals': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 4,
-                'placeholder': 'Set goals for next period...'
-            })
         }
+
+    def clean_feedback(self):
+        feedback = self.cleaned_data.get('feedback')
+        if len(feedback) > 300:
+            raise forms.ValidationError("Feedback cannot exceed 300 characters.")
+        return feedback
 
 
 class RecruitmentForm(forms.ModelForm):
@@ -383,11 +389,33 @@ class LeaveRequestForm(forms.ModelForm):
 class LoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['username'].widget.attrs.update({'placeholder': 'Enter your email', 'class': 'form-control'})
-        self.fields['password'].widget.attrs.update({'placeholder': 'Enter your password', 'class': 'form-control'})
+        self.fields['username'].widget.attrs.update({
+            'placeholder': 'Enter your email',
+            'class': 'form-control'
+        })
+        self.fields['password'].widget.attrs.update({
+            'placeholder': 'Enter your password',
+            'class': 'form-control'
+        })
+
+    def clean(self):
+        cleaned_data = super().clean()
+        username = cleaned_data.get('username')
+        password = cleaned_data.get('password')
+
+        if username and password:
+            user = authenticate(username=username, password=password)
+            if user is None:
+                raise forms.ValidationError(
+                    "Invalid email or password. Please check your credentials and try again."
+                )
+            if not user.is_active:
+                raise forms.ValidationError(
+                    "This account is inactive. Please contact support."
+                )
+        return cleaned_data
 
     def save(self, request):
-        """Authenticate and log in the user."""
         username = self.cleaned_data.get('username')
         password = self.cleaned_data.get('password')
         user = authenticate(request, username=username, password=password)
@@ -398,9 +426,32 @@ class LoginForm(AuthenticationForm):
 
 
 class SignupForm(UserCreationForm):
-    first_name = forms.CharField(max_length=30, required=True, help_text="Required. 30 characters or fewer.")
-    last_name = forms.CharField(max_length=30, required=True, help_text="Required. 30 characters or fewer.")
-    email = forms.EmailField(required=True)
+    first_name = forms.CharField(
+        max_length=30,
+        required=True,
+        help_text="Required. Enter your first name (max 30 characters).",
+        error_messages={
+            'required': 'First name is required.',
+            'max_length': 'First name cannot exceed 30 characters.'
+        }
+    )
+    last_name = forms.CharField(
+        max_length=30,
+        required=True,
+        help_text="Required. Enter your last name (max 30 characters).",
+        error_messages={
+            'required': 'Last name is required.',
+            'max_length': 'Last name cannot exceed 30 characters.'
+        }
+    )
+    email = forms.EmailField(
+        required=True,
+        help_text="Required. Enter a valid email address.",
+        error_messages={
+            'required': 'Email is required.',
+            'invalid': 'Please enter a valid email address.'
+        }
+    )
 
     class Meta:
         model = User
@@ -408,19 +459,66 @@ class SignupForm(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['username'].widget.attrs.update({'placeholder': 'Enter your username', 'class': 'form-control'})
-        self.fields['first_name'].widget.attrs.update({'placeholder': 'Enter your first name', 'class': 'form-control'})
-        self.fields['last_name'].widget.attrs.update({'placeholder': 'Enter your last name', 'class': 'form-control'})
-        self.fields['email'].widget.attrs.update({'placeholder': 'Enter your email', 'class': 'form-control'})
-        self.fields['password1'].widget.attrs.update({'placeholder': 'Enter your password', 'class': 'form-control'})
-        self.fields['password2'].widget.attrs.update({'placeholder': 'Confirm your password', 'class': 'form-control'})
+        self.fields['username'].widget.attrs.update({
+            'placeholder': 'Enter your username',
+            'class': 'form-control'
+        })
+        self.fields['first_name'].widget.attrs.update({
+            'placeholder': 'Enter your first name',
+            'class': 'form-control'
+        })
+        self.fields['last_name'].widget.attrs.update({
+            'placeholder': 'Enter your last name',
+            'class': 'form-control'
+        })
+        self.fields['email'].widget.attrs.update({
+            'placeholder': 'Enter your email',
+            'class': 'form-control'
+        })
+        self.fields['password1'].widget.attrs.update({
+            'placeholder': 'Enter your password',
+            'class': 'form-control'
+        })
+        self.fields['password2'].widget.attrs.update({
+            'placeholder': 'Confirm your password',
+            'class': 'form-control'
+        })
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if len(username) < 4:
+            raise ValidationError("Username must be at least 4 characters long.")
+        if User.objects.filter(username=username).exists():
+            raise ValidationError("This username is already taken. Please choose a different one.")
+        if not username.isalnum():
+            raise ValidationError("Username must contain only letters and numbers.")
+        return username
 
     def clean_email(self):
-        """Check if the email is already in use."""
         email = self.cleaned_data.get('email')
-        if email and User.objects.filter(email=email).exists():
+        if User.objects.filter(email=email).exists():
             raise ValidationError("This email is already registered. Please use a different email.")
         return email
+
+    def clean_password1(self):
+        password1 = self.cleaned_data.get('password1')
+        if len(password1) < 8:
+            raise ValidationError("Password must be at least 8 characters long.")
+        if not any(char.isdigit() for char in password1):
+            raise ValidationError("Password must contain at least one number.")
+        if not any(char.isupper() for char in password1):
+            raise ValidationError("Password must contain at least one uppercase letter.")
+        if not any(char in "!@#$%^&*" for char in password1):
+            raise ValidationError("Password must contain at least one special character (!@#$%^&*).")
+        return password1
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get('password1')
+        password2 = cleaned_data.get('password2')
+        if password1 and password2 and password1 != password2:
+            raise ValidationError("Passwords do not match.")
+        return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)

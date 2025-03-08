@@ -1,78 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Performance Review{% endblock %}
+{% block title %}Employee Review Dashboard{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h2>Performance Review</h2>
-
-    <!-- Add Review Button (Already Present) -->
-    <div class="mb-4">
-        <a href="{% url 'core:performance_review' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Add New Review
-        </a>
-    </div>
-
-    <!-- Messages -->
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-    <!-- Add Review Form -->
-    <div class="card">
-        <div class="card-header">
-            <h5>Add New Performance Review</h5>
-        </div>
-        <div class="card-body">
-            <form method="post">
-                {% csrf_token %}
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="employee" class="form-label">Select Employee Needing Review</label>
-                        <select id="employee" name="employee" class="form-select" required>
-                            <option value="">Select Employee</option>
-                            {% for emp in employees_needing_review %}
-                                <option value="{{ emp.id }}">{{ emp.user.get_full_name|default:'Unnamed Employee' }}</option>
-                            {% empty %}
-                                <option disabled>No employees currently need a review</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="row g-3 mt-3">
-                    <div class="col-md-6">
-                        <label for="{{ form.review_title.id_for_label }}" class="form-label">Review Title</label>
-                        {{ form.review_title }}
-                    </div>
-                    <div class="col-md-6">
-                        <label for="{{ form.review_date.id_for_label }}" class="form-label">Review Date</label>
-                        {{ form.review_date }}
-                    </div>
-                    <div class="col-md-6">
-                        <label for="{{ form.review_period.id_for_label }}" class="form-label">Review Period</label>
-                        {{ form.review_period }}
-                    </div>
-                    <div class="col-md-6">
-                        <label for="{{ form.rating.id_for_label }}" class="form-label">Rating (1-10)</label>
-                        {{ form.rating }}
-                    </div>
-                    <div class="col-md-12">
-                        <label for="{{ form.feedback.id_for_label }}" class="form-label">Review Comment</label>
-                        {{ form.feedback }}
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <button type="submit" class="btn btn-primary">Submit Review</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <h2>Employee Review Dashboard</h2>
 
     <!-- Filter Form -->
     <div class="card">
@@ -84,14 +17,16 @@
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
                         <label for="employee_filter" class="form-label fw-semibold">Filter by Employee</label>
-                        <select id="employee_filter" name="employee" class="form-select">
-                            <option value="">All Employees</option>
-                            {% for emp in all_employees %}
-                                <option value="{{ emp.id }}" {% if employee_filter == emp.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ emp.user.get_full_name|default:'Unnamed Employee' }}
-                                </option>
-                            {% endfor %}
-                        </select>
+                       <select id="employee_filter" name="employee" class="form-select">
+                        <option value="">All My Reviews</option>
+                        {% if request.user.is_authenticated and request.user.employee %}
+                            <option value="{{ request.user.employee.id }}" {% if employee_filter == request.user.employee.id|stringformat:"s" %}selected{% endif %}>
+                                {{ request.user.get_full_name|default:'Unnamed Employee' }}
+                            </option>
+                        {% else %}
+                            <option disabled>No employee data available</option>
+                        {% endif %}
+                    </select>
                     </div>
                     <div class="col-md-2">
                         <label for="review_period_filter" class="form-label fw-semibold">Review Period</label>
@@ -131,28 +66,25 @@
         </div>
     </div>
 
-   <!-- Existing Table -->
+    <!-- Existing Table -->
     <div class="card">
         <div class="card-body">
             <table class="table table-striped admin-table">
                 <thead>
                     <tr>
                         <th>Sr.No</th>
-                        <th>Employee Name</th>
                         <th>Review Title</th>
                         <th>Review Date</th>
                         <th>Review Period</th>
                         <th>Rating</th>
                         <th>Details</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <!-- No Edit or Delete for employees -->
                     </tr>
                 </thead>
                 <tbody>
                     {% for performance in performances %}
                     <tr>
                         <td>{{ forloop.counter }}</td>
-                        <td>{{ performance.employee.user.get_full_name|default:'Unnamed Employee' }}</td>
                         <td>{{ performance.review_title }}</td>
                         <td>{{ performance.review_date|date:"d-m-Y" }}</td>
                         <td>{{ performance.get_review_period_display }}</td>
@@ -160,16 +92,10 @@
                         <td>
                             <a href="{% url 'core:performance_review_detail' performance.id %}" class="btn btn-info btn-sm">Details</a>
                         </td>
-                        <td>
-                            <a href="{% url 'core:performance_review_edit' performance.id %}" class="btn btn-warning btn-sm">Edit</a>
-                        </td>
-                        <td>
-                            <a href="{% url 'core:performance_review_delete' performance.id %}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this review?');">Delete</a>
-                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9">No performance reviews found</td>
+                        <td colspan="6">No performance reviews found</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -207,6 +133,49 @@
                 </ul>
             </nav>
             {% endif %}
+        </div>
+    </div>
+
+    <!-- Statistics Section -->
+    <div class="card">
+        <div class="card-body">
+            <h5>Performance Review Statistics</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Period-Wise Number of Reviews</h6>
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Monthly
+                            <span class="badge bg-primary">{{ performance_stats.monthly }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Quarterly
+                            <span class="badge bg-primary">{{ performance_stats.quarterly }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Annual
+                            <span class="badge bg-primary">{{ performance_stats.annual }}</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>Rating vs Total Number of Reviews</h6>
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Between 1-5
+                            <span class="badge bg-primary">{{ performance_stats.rating_1_5 }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Between 6-8
+                            <span class="badge bg-primary">{{ performance_stats.rating_6_8 }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Above 9
+                            <span class="badge bg-primary">{{ performance_stats.rating_9_10 }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -408,46 +377,4 @@
         }
     }
 </style>
-
-{% block extra_js %}
-<script>
-    let isUpdatingEmployees = false;
-
-    function updateEmployees() {
-        const employeeSelect = document.getElementById('employee_filter');
-
-        while (employeeSelect.options.length > 1) {
-            employeeSelect.remove(1);
-        }
-
-        const allEmployees = [
-            {% for emp in all_employees %}
-                { id: '{{ emp.id }}', user__get_full_name: '{{ emp.user.get_full_name|default:"Unnamed Employee" }}' },
-            {% endfor %}
-        ];
-        if (allEmployees.length > 0) {
-            allEmployees.forEach(emp => {
-                if (emp.user__get_full_name) {
-                    const option = document.createElement('option');
-                    option.value = emp.id;
-                    option.text = emp.user__get_full_name;
-                    if ('{{ employee_filter|default:"" }}' && emp.id == '{{ employee_filter|default:"" }}') {
-                        option.selected = true;
-                    }
-                    employeeSelect.appendChild(option);
-                }
-            });
-        } else {
-            const option = document.createElement('option');
-            option.text = "No employees available";
-            option.disabled = true;
-            employeeSelect.appendChild(option);
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        updateEmployees();
-    });
-</script>
-{% endblock %}
 {% endblock %}

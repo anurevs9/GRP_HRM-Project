@@ -65,9 +65,9 @@ class LeaveAdmin(admin.ModelAdmin):
 
 @admin.register(Performance)
 class PerformanceAdmin(admin.ModelAdmin):
-    list_display = ('employee', 'review_period', 'rating', 'review_date')
-    list_filter = ('rating', 'review_date')
-    search_fields = ('employee__user__username', 'feedback')
+    list_display = ('employee', 'review_title', 'review_period', 'rating', 'review_date')
+    list_filter = ('review_period', 'rating', 'review_date')
+    search_fields = ('employee__user__username', 'review_title', 'feedback')
 
 @admin.register(Recruitment)
 class RecruitmentAdmin(admin.ModelAdmin):

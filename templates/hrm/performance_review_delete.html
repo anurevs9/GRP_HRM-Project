@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Review{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-danger">Delete Review</h1>
+        <a href="{% url 'core:employee_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Employees
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">Confirm Deletion</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Are you sure you want to delete the following performance review?</p>
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ performance.review_title }}</h6>
+                            <p class="card-text">
+                                <strong>Employee:</strong> {{ performance.employee.user.get_full_name }}<br>
+                                <strong>Review Date:</strong> {{ performance.review_date|date:"d-m-Y" }}<br>
+                                <strong>Review Period:</strong> {{ performance.get_review_period_display }}<br>
+                                <strong>Rating:</strong> {{ performance.rating }}<br>
+                                <strong>Comment:</strong> {{ performance.feedback|truncatewords:15 }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash me-2"></i>Yes, Delete
+                            </button>
+                            <a href="{% url 'core:performance_review_detail' performance.id %}" class="btn btn-outline-secondary ms-2">
+                                <i class="bi bi-x-circle me-2"></i>No, Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

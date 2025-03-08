@@ -5,12 +5,15 @@
     <meta charset="UTF-8">
     <title>Login and Registration Form</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
-    <!-- Fontawesome CDN Link -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/login_register.css' %}">
+    <style>
+        .input-box { position: relative; margin-bottom: 20px; }
+        .input-box i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #aaa; }
+        .form-control { padding-left: 35px; }
+        .error-message { color: #dc3545; font-size: 0.9em; margin-top: 5px; }
+    </style>
 </head>
 <body>
 <div class="container">
@@ -42,18 +45,22 @@
                         <div class="input-box">
                             <i class="fas fa-envelope"></i>
                             {{ login_form.username }}
-                            <div class="text-danger">{{ login_form.username.errors }}</div>
+                            {% if login_form.username.errors %}
+                                <div class="error-message">{{ login_form.username.errors|join:", " }}</div>
+                            {% endif %}
                         </div>
                         <div class="input-box">
                             <i class="fas fa-lock"></i>
                             {{ login_form.password }}
-                            <div class="text-danger">{{ login_form.password.errors }}</div>
+                            {% if login_form.password.errors %}
+                                <div class="error-message">{{ login_form.password.errors|join:", " }}</div>
+                            {% endif %}
                         </div>
                         <div class="text">
                             <a href="{% url 'core:forgot_password' %}">Forgot password?</a>
                         </div>
                         <div class="button input-box">
-                            <input type="submit" value="Submit" class="btn btn-primary">
+                            <input type="submit" value="Login" class="btn btn-primary">
                         </div>
                         <div class="text sign-up-text">Don't have an account? <label for="flip">Signup now</label></div>
                     </div>
@@ -68,35 +75,47 @@
                         <div class="input-box">
                             <i class="fas fa-user"></i>
                             {{ signup_form.username }}
-                            <div class="text-danger">{{ signup_form.username.errors }}</div>
+                            {% if signup_form.username.errors %}
+                                <div class="error-message">{{ signup_form.username.errors|join:", " }}</div>
+                            {% endif %}
                         </div>
                         <div class="input-box">
                             <i class="fas fa-user"></i>
                             {{ signup_form.first_name }}
-                            <div class="text-danger">{{ signup_form.first_name.errors }}</div>
+                            {% if signup_form.first_name.errors %}
+                                <div class="error-message">{{ signup_form.first_name.errors|join:", " }}</div>
+                            {% endif %}
                         </div>
                         <div class="input-box">
                             <i class="fas fa-user"></i>
                             {{ signup_form.last_name }}
-                            <div class="text-danger">{{ signup_form.last_name.errors }}</div>
+                            {% if signup_form.last_name.errors %}
+                                <div class="error-message">{{ signup_form.last_name.errors|join:", " }}</div>
+                            {% endif %}
                         </div>
                         <div class="input-box">
                             <i class="fas fa-envelope"></i>
                             {{ signup_form.email }}
-                            <div class="text-danger">{{ signup_form.email.errors }}</div>
+                            {% if signup_form.email.errors %}
+                                <div class="error-message">{{ signup_form.email.errors|join:", " }}</div>
+                            {% endif %}
                         </div>
                         <div class="input-box">
                             <i class="fas fa-lock"></i>
                             {{ signup_form.password1 }}
-                            <div class="text-danger">{{ signup_form.password.errors }}</div>
+                            {% if signup_form.password1.errors %}
+                                <div class="error-message">{{ signup_form.password1.errors|join:", " }}</div>
+                            {% endif %}
                         </div>
                         <div class="input-box">
                             <i class="fas fa-lock"></i>
                             {{ signup_form.password2 }}
-                            <div class="text-danger">{{ signup_form.password2.errors }}</div>
+                            {% if signup_form.password2.errors %}
+                                <div class="error-message">{{ signup_form.password2.errors|join:", " }}</div>
+                            {% endif %}
                         </div>
                         <div class="button input-box">
-                            <input type="submit" value="Submit" class="btn btn-primary">
+                            <input type="submit" value="Sign Up" class="btn btn-primary">
                         </div>
                         <div class="text sign-up-text">Already have an account? <label for="flip">Login now</label></div>
                     </div>
@@ -105,9 +124,51 @@
         </div>
     </div>
 </div>
-<!-- Bootstrap JS and Popper.js -->
+
+<!-- Bootstrap Modal for Messages -->
+<div class="modal fade" id="messageModal" tabindex="-1" role="dialog" aria-labelledby="messageModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="messageModalLabel">Notification</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="messageModalBody">
+                <!-- Messages will be injected here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    {% if messages %}
+        document.addEventListener('DOMContentLoaded', function() {
+            let messages = [];
+            {% for message in messages %}
+                messages.push({
+                    text: "{{ message|escapejs }}",
+                    type: "{{ message.tags|escapejs }}"
+                });
+            {% endfor %}
+
+            let modalBody = document.getElementById('messageModalBody');
+            modalBody.innerHTML = ''; // Clear previous content
+            messages.forEach(function(msg) {
+                let className = msg.type === 'error' ? 'text-danger' : 'text-success';
+                modalBody.innerHTML += `<p class="${className}">${msg.text}</p>`;
+            });
+
+            $('#messageModal').modal('show');
+        });
+    {% endif %}
+</script>
 </body>
 </html>

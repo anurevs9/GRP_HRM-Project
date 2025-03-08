@@ -5,9 +5,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Epic HR - {% block title %}{% endblock %}</title>
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="{% static 'images/254.jpg' %}">
+  <!-- Existing CSS -->
   <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% block extra_css %}{% endblock %}
 </head>
 <body>
   <div class="d-flex">
@@ -92,6 +96,23 @@
             <a href="{% url 'core:employee_task_view' %}" class="nav-link {% if 'employee_task_view' in request.path %}active{% endif %}">
               <i class="bi bi-list-task"></i>
               <span>My Tasks</span>
+            </a>
+          {% endif %}
+          <!-- Performance Management -->
+          {% if request.user.employee.role.name == 'ADMIN' %}
+            <a href="{% url 'core:admin_performance_view' %}" class="nav-link {% if 'admin_performance_view' in request.path %}active{% endif %}">
+              <i class="bi bi-star-fill"></i>
+              <span>Performance</span>
+            </a>
+          {% elif request.user.employee.role.name in 'MANAGER,TEAM_LEADER' %}
+            <a href="{% url 'core:manager_performance_view' %}" class="nav-link {% if 'manager_performance_view' in request.path %}active{% endif %}">
+              <i class="bi bi-star-fill"></i>
+              <span>Performance</span>
+            </a>
+          {% else %}
+            <a href="{% url 'core:employee_review_dashboard' %}" class="nav-link {% if 'employee_review_dashboard' in request.path %}active{% endif %}">
+              <i class="bi bi-star-fill"></i>
+              <span>Performance</span>
             </a>
           {% endif %}
         </nav>

@@ -7,7 +7,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.core.paginator import PageNotAnInteger, Paginator, EmptyPage
-from django.db.models import Q, Avg
+from django.db.models import Q, Avg, Max
 from django.db.models.functions import ExtractMonth
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -58,24 +58,21 @@ def dashboard(request):
     if request.employee.role.name == 'ADMIN':
         all_employees = Employee.objects.all()
         assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').all()
+        performances = Performance.objects.all()  # For Admin: all performance reviews
     elif request.employee.role.name in ['MANAGER', 'TEAM_LEADER']:
         all_employees = Employee.objects.filter(reporting_manager=request.employee)
         assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').filter(employee__in=all_employees)
+        performances = Performance.objects.filter(employee__in=all_employees)  # For Manager/TL: reviews of reporting employees
     else:  # EMPLOYEE
         all_employees = Employee.objects.filter(id=request.employee.id)
         assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').filter(employee=request.employee)
+        performances = Performance.objects.filter(employee=request.employee)  # For Employee: their own reviews
 
-    # Apply filters
+    # Apply task filters (same as before)
     employee_filter = request.GET.get('employee')
     status_filter = request.GET.get('status')
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
-
-    print(f"Received filters: employee={employee_filter}, status={status_filter}, date_from={date_from}, date_to={date_to}")  # Debug
-
-    # Store initial count for debugging
-    initial_count = assignments_queryset.count()
-    print(f"Initial task count: {initial_count}")
 
     if employee_filter:
         assignments_queryset = assignments_queryset.filter(employee__id=employee_filter)
@@ -83,31 +80,20 @@ def dashboard(request):
         assignments_queryset = assignments_queryset.filter(status=status_filter)
     if date_from and date_to:
         try:
-            # Parse the date strings (YYYY-MM-DD format)
             date_from_dt = datetime.strptime(date_from, '%Y-%m-%d')
             date_to_dt = datetime.strptime(date_to, '%Y-%m-%d')
-
-            # Create timezone-aware datetime objects
-            date_from_start = timezone.make_aware(datetime.combine(date_from_dt, time.min))  # 00:00:00
-            date_to_end = timezone.make_aware(datetime.combine(date_to_dt, time.max))  # 23:59:59.999999
-
-            print(f"Filtering with range: {date_from_start} to {date_to_end}")  # Debug
+            date_from_start = timezone.make_aware(datetime.combine(date_from_dt, time.min))
+            date_to_end = timezone.make_aware(datetime.combine(date_to_dt, time.max))
             assignments_queryset = assignments_queryset.filter(assigned_date__range=[date_from_start, date_to_end])
-
-            # Debug: Print the tasks after filtering
-            filtered_tasks = assignments_queryset.values('assignment_id', 'task__task_title', 'assigned_date')
-            print(f"Filtered tasks: {list(filtered_tasks)}")
-            print(f"Filtered task count: {assignments_queryset.count()}")
         except ValueError as e:
             messages.error(request, f"Invalid date format for Date From or Date To. Please use YYYY-MM-DD. Error: {str(e)}")
     elif date_from or date_to:
         messages.warning(request, "Please provide both Date From and Date To for date filtering.")
 
-    # Add ordering to avoid UnorderedObjectListWarning
     assignments_queryset = assignments_queryset.order_by('assigned_date')
 
-    # Pagination
-    paginator = Paginator(assignments_queryset, 5)  # 5 items per page
+    # Pagination for tasks
+    paginator = Paginator(assignments_queryset, 5)
     page = request.GET.get('page')
     try:
         assignments = paginator.page(page)
@@ -117,6 +103,17 @@ def dashboard(request):
         assignments = paginator.page(paginator.num_pages)
 
     status_choices = ['PENDING', 'IN_PROGRESS', 'COMPLETED']
+
+    # Performance statistics
+    performance_stats = {
+        'total_reviews': performances.count(),
+        'monthly': performances.filter(review_period='MONTHLY').count(),
+        'quarterly': performances.filter(review_period='QUARTERLY').count(),
+        'annual': performances.filter(review_period='ANNUAL').count(),
+        'rating_1_5': performances.filter(rating__lte=5).count(),
+        'rating_6_8': performances.filter(rating__gte=6, rating__lte=8).count(),
+        'rating_9_10': performances.filter(rating__gte=9).count(),
+    }
 
     context = {
         'today': timezone.now(),
@@ -141,9 +138,10 @@ def dashboard(request):
         'status_filter': status_filter,
         'date_from': date_from,
         'date_to': date_to,
+        'performance_stats': performance_stats,  # Add performance stats to context
     }
 
-    # Performance data
+    # Performance data for charts (same as before)
     performance_data = Performance.objects.filter(employee=request.employee).order_by('review_date')
     monthly_ratings = Performance.objects.filter(employee=request.employee).annotate(
         month=ExtractMonth('review_date')
@@ -168,11 +166,6 @@ def employee_list(request):
     employees = Employee.objects.select_related('user', 'department', 'role').all()
     return render(request, 'hrm/employee_list.html', {'employees': employees}) # Assuming core/employee_list.html
 
-
-from django.shortcuts import render, redirect
-from django.contrib import messages
-# ... your other imports ...
-from .forms import LeaveRequestForm # Assuming your form is in forms.py
 
 # ... your decorator ...
 @employee_required
@@ -204,31 +197,379 @@ def leave_request(request):
     })
 
 @employee_required
-def performance_review(request, employee_id):
-    employee = get_object_or_404(Employee, id=employee_id)
-    previous_reviews = Performance.objects.filter(
-        employee=employee
-    ).order_by('-review_date')
+def performance_review(request):
+    if request.user.employee.role.name not in ['ADMIN', 'MANAGER', 'TEAM_LEADER']:
+        messages.error(request, 'You do not have permission to add performance reviews.')
+        return redirect('core:dashboard')
 
+    # Get employees based on role
+    if request.user.employee.role.name == 'ADMIN':
+        employees = Employee.objects.all()
+        all_employees = Employee.objects.select_related('user').all()
+    else:
+        employees = Employee.objects.filter(reporting_manager=request.user.employee)
+        all_employees = Employee.objects.filter(reporting_manager=request.user.employee).select_related('user')
+
+    # Filter employees needing review
+    employees_needing_review = []
+    six_months_ago = timezone.now() - timezone.timedelta(days=180)
+    six_months_ago_date = six_months_ago.date()
+    for emp in employees:
+        latest_review = Performance.objects.filter(employee=emp).aggregate(Max('review_date'))['review_date__max']
+        if not latest_review or latest_review < six_months_ago_date:
+            employees_needing_review.append(emp)
+
+    # Filter performance reviews
+    performances = Performance.objects.filter(employee__in=employees).select_related('employee__user', 'reviewed_by')
+
+    # Apply filters
+    employee_id = request.GET.get('employee')
+    review_period = request.GET.get('review_period')
+    rating_range = request.GET.get('rating_range')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    if employee_id:
+        performances = performances.filter(employee_id=employee_id)
+    if review_period:
+        performances = performances.filter(review_period=review_period.upper())
+    if rating_range:
+        if rating_range == '1_5':
+            performances = performances.filter(rating__lte=5)
+        elif rating_range == '6_8':
+            performances = performances.filter(rating__gte=6, rating__lte=8)
+        elif rating_range == '9_10':
+            performances = performances.filter(rating__gte=9)
+    if date_from:
+        performances = performances.filter(review_date__gte=date_from)
+    if date_to:
+        performances = performances.filter(review_date__lte=date_to)
+
+    # Pagination
+    paginator = Paginator(performances, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Handle form submission
     if request.method == 'POST':
+        employee_id = request.POST.get('employee')
+        employee = get_object_or_404(Employee, id=employee_id)
+
+        if request.user.employee.role.name != 'ADMIN':
+            reporting_employees = Employee.objects.filter(reporting_manager=request.user.employee)
+            if employee not in reporting_employees:
+                messages.error(request, 'You can only review employees who report to you.')
+                return redirect('core:employee_list')
+
         form = PerformanceReviewForm(request.POST)
         if form.is_valid():
             review = form.save(commit=False)
             review.employee = employee
-            review.reviewed_by = request.user  # The logged-in user is the reviewer
-            review.review_date = timezone.now()  # Use timezone.now() for consistency
+            review.reviewed_by = request.user
             review.save()
             messages.success(request, 'Performance review submitted successfully.')
-            return redirect('core:employee_list')  # Redirect to employee list
+            return redirect('core:performance_review')
     else:
         form = PerformanceReviewForm()
 
     context = {
-        'employee': employee,
+        'employees_needing_review': employees_needing_review,
+        'all_employees': all_employees,
         'form': form,
-        'previous_reviews': previous_reviews
+        'performances': page_obj,
+        'employee_filter': employee_id,
+        'review_period_filter': review_period,
+        'rating_range_filter': rating_range,
+        'date_from': date_from,
+        'date_to': date_to,
+        'review_period_choices': [choice[0] for choice in Performance.REVIEW_PERIOD_CHOICES],
+        'rating_ranges': [
+            ('1_5', '1-5'),
+            ('6_8', '6-8'),
+            ('9_10', '9-10'),
+        ],
     }
-    return render(request, 'hrm/performance_review.html', context) # Assuming core/performance_review.html
+    return render(request, 'hrm/performance_review.html', context)
+
+@employee_required
+def performance_review_edit(request, performance_id):
+    performance = get_object_or_404(Performance, pk=performance_id)
+    # Permission check: Only the reviewer (or Admin) can edit
+    if request.user.employee.role.name not in ['ADMIN', 'MANAGER', 'TEAM_LEADER'] or \
+       (request.user.employee.role.name in ['MANAGER', 'TEAM_LEADER'] and performance.reviewed_by != request.user.employee and request.user.employee != performance.employee.reporting_manager):
+        messages.error(request, 'You do not have permission to edit this review.')
+        return redirect('core:dashboard' if request.user.employee.role.name == 'EMPLOYEE' else
+                       'core:manager_performance_view' if request.user.employee.role.name in ['MANAGER', 'TEAM_LEADER'] else 'core:admin_performance_view')
+
+    if request.method == 'POST':
+        form = PerformanceReviewForm(request.POST, instance=performance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Performance review updated successfully.')
+            return redirect('core:performance_review_detail', performance_id=performance.id)
+    else:
+        form = PerformanceReviewForm(instance=performance)
+
+    context = {'form': form, 'performance': performance}
+    return render(request, 'hrm/performance_review_edit.html', context)
+
+@employee_required
+def performance_review_delete(request, performance_id):
+    performance = get_object_or_404(Performance, pk=performance_id)
+    # Permission check: Only the reviewer (or Admin) can delete
+    if request.user.employee.role.name not in ['ADMIN', 'MANAGER', 'TEAM_LEADER'] or \
+       (request.user.employee.role.name in ['MANAGER', 'TEAM_LEADER'] and performance.reviewed_by != request.user.employee and request.user.employee != performance.employee.reporting_manager):
+        messages.error(request, 'You do not have permission to delete this review.')
+        return redirect('core:dashboard' if request.user.employee.role.name == 'EMPLOYEE' else
+                       'core:manager_performance_view' if request.user.employee.role.name in ['MANAGER', 'TEAM_LEADER'] else 'core:admin_performance_view')
+
+    if request.method == 'POST':
+        performance.delete()
+        messages.success(request, 'Performance review deleted successfully.')
+        return redirect('core:manager_performance_view' if request.user.employee.role.name in ['MANAGER', 'TEAM_LEADER'] else 'core:admin_performance_view')
+
+    context = {'performance': performance}
+    return render(request, 'hrm/performance_review_delete.html', context)
+
+# Admin Performance View
+@employee_required
+def admin_performance_view(request):
+    if request.user.employee.role.name != 'ADMIN':
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('core:dashboard')
+
+    performances = Performance.objects.select_related('employee__user', 'reviewed_by').all()
+
+    # Apply filters
+    department_id = request.GET.get('department')
+    employee_id = request.GET.get('employee')
+    review_period = request.GET.get('review_period')
+    rating_range = request.GET.get('rating_range')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    employee_search = request.GET.get('employee_search')
+
+    if department_id:
+        performances = performances.filter(employee__department_id=department_id)
+    if employee_id:
+        performances = performances.filter(employee_id=employee_id)
+    if review_period:
+        performances = performances.filter(review_period=review_period.upper())
+    if rating_range:
+        if rating_range == '1_5':
+            performances = performances.filter(rating__lte=5)
+        elif rating_range == '6_8':
+            performances = performances.filter(rating__gte=6, rating__lte=8)
+        elif rating_range == '9_10':
+            performances = performances.filter(rating__gte=9)
+    if date_from:
+        performances = performances.filter(review_date__gte=date_from)
+    if date_to:
+        performances = performances.filter(review_date__lte=date_to)
+    if employee_search:
+        # Split the search term into parts (e.g., "Sam Lee" -> ["Sam", "Lee"])
+        search_terms = employee_search.strip().split()
+        if len(search_terms) == 1:
+            # Single term: match either first_name or last_name
+            term = search_terms[0]
+            performances = performances.filter(
+                Q(employee__user__first_name__icontains=term) |
+                Q(employee__user__last_name__icontains=term)
+            )
+        elif len(search_terms) >= 2:
+            # Two or more terms: assume first term is first_name, second is last_name
+            first_name = search_terms[0]
+            last_name = search_terms[1]
+            performances = performances.filter(
+                Q(employee__user__first_name__icontains=first_name) &
+                Q(employee__user__last_name__icontains=last_name)
+            )
+
+    # Pagination
+    paginator = Paginator(performances, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Statistics
+    performances_for_stats = Performance.objects.all()
+    performance_stats = {
+        'monthly': performances_for_stats.filter(review_period='MONTHLY').count(),
+        'quarterly': performances_for_stats.filter(review_period='QUARTERLY').count(),
+        'annual': performances_for_stats.filter(review_period='ANNUAL').count(),
+        'rating_1_5': performances_for_stats.filter(rating__lte=5).count(),
+        'rating_6_8': performances_for_stats.filter(rating__gte=6, rating__lte=8).count(),
+        'rating_9_10': performances_for_stats.filter(rating__gte=9).count(),
+    }
+
+    context = {
+        'performances': page_obj,
+        'all_employees': Employee.objects.select_related('user').all(),
+        'departments': Department.objects.all(),
+        'department_id': department_id,
+        'employee_filter': employee_id,
+        'review_period_filter': review_period,
+        'rating_range_filter': rating_range,
+        'date_from': date_from,
+        'date_to': date_to,
+        'employee_search': employee_search,
+        'review_period_choices': [choice[0] for choice in Performance.REVIEW_PERIOD_CHOICES],
+        'rating_ranges': [
+            ('1_5', '1-5'),
+            ('6_8', '6-8'),
+            ('9_10', '9-10'),
+        ],
+        'performance_stats': performance_stats,
+    }
+    return render(request, 'hrm/admin_performance_view.html', context)
+
+# Manager/Team Leader Performance View
+@employee_required
+def manager_performance_view(request):
+    if request.user.employee.role.name not in ['MANAGER', 'TEAM_LEADER']:
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('core:dashboard')
+
+    employees = Employee.objects.filter(reporting_manager=request.user.employee)
+    performances = Performance.objects.filter(employee__in=employees).select_related('employee__user', 'reviewed_by')
+
+    # Apply filters
+    employee_id = request.GET.get('employee')
+    review_period = request.GET.get('review_period')
+    rating_range = request.GET.get('rating_range')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    employee_search = request.GET.get('employee_search')
+
+    if employee_id:
+        performances = performances.filter(employee_id=employee_id)
+    if review_period:
+        performances = performances.filter(review_period=review_period.upper())
+    if rating_range:
+        if rating_range == '1_5':
+            performances = performances.filter(rating__lte=5)
+        elif rating_range == '6_8':
+            performances = performances.filter(rating__gte=6, rating__lte=8)
+        elif rating_range == '9_10':
+            performances = performances.filter(rating__gte=9)
+    if date_from:
+        performances = performances.filter(review_date__gte=date_from)
+    if date_to:
+        performances = performances.filter(review_date__lte=date_to)
+    if employee_search:
+        # Split the search term into parts
+        search_terms = employee_search.strip().split()
+        if len(search_terms) == 1:
+            # Single term: match either first_name or last_name
+            term = search_terms[0]
+            performances = performances.filter(
+                Q(employee__user__first_name__icontains=term) |
+                Q(employee__user__last_name__icontains=term)
+            )
+        elif len(search_terms) >= 2:
+            # Two or more terms: assume first term is first_name, second is last_name
+            first_name = search_terms[0]
+            last_name = search_terms[1]
+            performances = performances.filter(
+                Q(employee__user__first_name__icontains=first_name) &
+                Q(employee__user__last_name__icontains=last_name)
+            )
+
+    # Pagination
+    paginator = Paginator(performances, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Statistics
+    performances_for_stats = Performance.objects.filter(employee__in=employees)
+    performance_stats = {
+        'monthly': performances_for_stats.filter(review_period='MONTHLY').count(),
+        'quarterly': performances_for_stats.filter(review_period='QUARTERLY').count(),
+        'annual': performances_for_stats.filter(review_period='ANNUAL').count(),
+        'rating_1_5': performances_for_stats.filter(rating__lte=5).count(),
+        'rating_6_8': performances_for_stats.filter(rating__gte=6, rating__lte=8).count(),
+        'rating_9_10': performances_for_stats.filter(rating__gte=9).count(),
+    }
+
+    context = {
+        'performances': page_obj,
+        'all_employees': employees,
+        'employee_filter': employee_id,
+        'review_period_filter': review_period,
+        'rating_range_filter': rating_range,
+        'date_from': date_from,
+        'date_to': date_to,
+        'employee_search': employee_search,
+        'review_period_choices': [choice[0] for choice in Performance.REVIEW_PERIOD_CHOICES],
+        'rating_ranges': [
+            ('1_5', '1-5'),
+            ('6_8', '6-8'),
+            ('9_10', '9-10'),
+        ],
+        'performance_stats': performance_stats,
+    }
+    return render(request, 'hrm/manager_performance_view.html', context)
+
+# Employee Review Dashboard (Updated for Consistency)
+@employee_required
+def employee_review_dashboard(request):
+    performances = Performance.objects.filter(employee=request.user.employee).select_related('employee__user', 'reviewed_by')
+
+    # Apply filters
+    review_period = request.GET.get('review_period')
+    rating_range = request.GET.get('rating_range')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    employee_filter = request.GET.get('employee')  # Added employee filter parameter
+
+    if review_period:
+        performances = performances.filter(review_period=review_period.upper())
+    if rating_range:
+        if rating_range == '1_5':
+            performances = performances.filter(rating__lte=5)
+        elif rating_range == '6_8':
+            performances = performances.filter(rating__gte=6, rating__lte=8)
+        elif rating_range == '9_10':
+            performances = performances.filter(rating__gte=9)
+    if date_from:
+        performances = performances.filter(review_date__gte=date_from)
+    if date_to:
+        performances = performances.filter(review_date__lte=date_to)
+    # Handle employee filter (only for the logged-in employee)
+    if employee_filter and employee_filter == str(request.user.employee.id):
+        performances = performances.filter(employee_id=employee_filter)
+
+    # Pagination
+    paginator = Paginator(performances, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Statistics (for employee's own reviews)
+    performances_for_stats = Performance.objects.filter(employee=request.user.employee)
+    performance_stats = {
+        'monthly': performances_for_stats.filter(review_period='MONTHLY').count(),
+        'quarterly': performances_for_stats.filter(review_period='QUARTERLY').count(),
+        'annual': performances_for_stats.filter(review_period='ANNUAL').count(),
+        'rating_1_5': performances_for_stats.filter(rating__lte=5).count(),
+        'rating_6_8': performances_for_stats.filter(rating__gte=6, rating__lte=8).count(),
+        'rating_9_10': performances_for_stats.filter(rating__gte=9).count(),
+    }
+
+    context = {
+        'performances': page_obj,
+        'review_period_filter': review_period,
+        'rating_range_filter': rating_range,
+        'date_from': date_from,
+        'date_to': date_to,
+        'employee_filter': employee_filter,  # Added to context for dropdown pre-selection
+        'review_period_choices': [choice[0] for choice in Performance.REVIEW_PERIOD_CHOICES],
+        'rating_ranges': [
+            ('1_5', '1-5'),
+            ('6_8', '6-8'),
+            ('9_10', '9-10'),
+        ],
+        'performance_stats': performance_stats,
+    }
+    return render(request, 'hrm/employee_review_dashboard.html', context)
 
 
 
@@ -415,9 +756,20 @@ def employee_performance_detail(request, employee_id):
     }
     return render(request, 'hrm/employee_performance_detail.html', context) # Create this template
 
-@employee_required # Assuming you want employee_required
+@employee_required
 def performance_review_detail(request, performance_id):
-    performance = get_object_or_404(Performance, pk=performance_id) # Fetch the specific Performance object
+    performance = get_object_or_404(Performance, pk=performance_id)
+
+    # Restrict access: Employees can only see their own reviews; Managers/TLs can see reviews of their reporting employees
+    if request.employee.role.name == 'EMPLOYEE' and performance.employee != request.employee:
+        messages.error(request, 'You do not have permission to view this review.')
+        return redirect('core:employee_review_dashboard')
+    elif request.employee.role.name in ['MANAGER', 'TEAM_LEADER']:
+        reporting_employees = Employee.objects.filter(reporting_manager=request.employee)
+        if performance.employee not in reporting_employees:
+            messages.error(request, 'You can only view reviews of employees who report to you.')
+            return redirect('core:dashboard')
+
     context = {
         'performance': performance,
     }
@@ -639,34 +991,30 @@ def manager_task_view(request):
         messages.error(request, 'You do not have permission to view this page.')
         return redirect('core:task_list')
 
-    # Fetch departments for filtering
     departments = Department.objects.all()
-
-    # Fetch filter values from the request
     department_id = request.GET.get('department')
     employee_filter = request.GET.get('employee')
     status_filter = request.GET.get('status')
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
 
-    # Get all reporting employees (unfiltered for the initial context)
     if request.employee.role.name == 'ADMIN':
         all_employees = Employee.objects.all().select_related('user')
     else:
         all_employees = Employee.objects.filter(reporting_manager=request.employee).select_related('user')
 
-    # Filter employees for the form based on department_id
     employees = all_employees
     if department_id:
         employees = employees.filter(department_id=department_id)
 
-    # Fetch task assignments for reporting employees with filtering (unpaginated queryset for stats)
     if request.employee.role.name == 'ADMIN':
         assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').all().distinct()
+        performances = Performance.objects.all()
     else:
         assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').filter(
             employee__in=all_employees
         ).distinct()
+        performances = Performance.objects.filter(employee__in=all_employees)
 
     if department_id:
         assignments_queryset = assignments_queryset.filter(employee__department_id=department_id)
@@ -677,7 +1025,6 @@ def manager_task_view(request):
     if date_from and date_to:
         assignments_queryset = assignments_queryset.filter(assigned_date__range=[date_from, date_to])
 
-    # Task statistics (calculated on unpaginated queryset)
     task_stats = {
         'total': assignments_queryset.count(),
         'completed': assignments_queryset.filter(status='COMPLETED').count(),
@@ -685,8 +1032,18 @@ def manager_task_view(request):
         'pending': assignments_queryset.filter(status='PENDING').count(),
     }
 
-    # Pagination
-    paginator = Paginator(assignments_queryset, 5)  # 5 items per page
+    # Performance statistics
+    performance_stats = {
+        'total_reviews': performances.count(),
+        'monthly': performances.filter(review_period='MONTHLY').count(),
+        'quarterly': performances.filter(review_period='QUARTERLY').count(),
+        'annual': performances.filter(review_period='ANNUAL').count(),
+        'rating_1_5': performances.filter(rating__lte=5).count(),
+        'rating_6_8': performances.filter(rating__gte=6, rating__lte=8).count(),
+        'rating_9_10': performances.filter(rating__gte=9).count(),
+    }
+
+    paginator = Paginator(assignments_queryset, 5)
     page = request.GET.get('page')
     try:
         assignments = paginator.page(page)
@@ -708,6 +1065,7 @@ def manager_task_view(request):
         'date_from': date_from,
         'date_to': date_to,
         'status_choices': ['PENDING', 'IN_PROGRESS', 'COMPLETED'],
+        'performance_stats': performance_stats,  # Add performance stats
     }
 
     return render(request, 'hrm/manager_task_view.html', context)
@@ -869,7 +1227,7 @@ def edit_profile(request):
                 form.cleaned_data.pop('role', None)       # Remove role from cleaned_data if not admin/manager
 
             form.save()
-            messages.success(request, 'Your profile has been updated successfully.')
+            messages.success(request, 'Your profile has been updated successfully.', extra_tags='profile')
             return redirect('core:dashboard')
     else:
         form = ProfileForm(instance=employee, user=request.user)
@@ -1189,8 +1547,6 @@ def department_deactivate(request, pk):
     return render(request, 'hrm/department/deactivate_confirm.html', {'department': department}) # Optional confirmation page (see next step - can be removed if you don't want confirmation)
 
 
-
-
 def login_register_view(request):
     login_form = LoginForm(prefix='login')
     signup_form = SignupForm(prefix='signup')
@@ -1200,28 +1556,42 @@ def login_register_view(request):
         if 'login_submit' in request.POST:
             login_form = LoginForm(request, data=request.POST, prefix='login')
             if login_form.is_valid():
-                user = login_form.get_user()
-                if user is not None:
-                    login(request, user)
-                    messages.success(request, 'Login successful!', extra_tags='login-success')
+                user = login_form.save(request)
+                if user:
+                    messages.success(request, f"Welcome back, {user.first_name}! Login successful.", extra_tags='login-success')
                     return redirect('core:dashboard')
                 else:
-                    messages.error(request, 'Login failed. Please check your credentials.')
+                    messages.error(request, "Authentication failed. Please check your credentials.")
             else:
-                messages.error(request, 'Login failed. Please correct the errors below.')
-                context['login_form'] = login_form  # Re-populate the form with errors
+                errors = login_form.errors.as_data()
+                if 'username' in errors:
+                    messages.error(request, "Please enter a valid email address.")
+                if 'password' in errors:
+                    messages.error(request, "Password field cannot be empty.")
+                if '__all__' in errors:
+                    for error in errors['__all__']:
+                        messages.error(request, str(error))
+                context['login_form'] = login_form
 
         elif 'signup_submit' in request.POST:
             signup_form = SignupForm(request.POST, prefix='signup')
             if signup_form.is_valid():
                 user = signup_form.save()
-                messages.success(request, 'Signup successful! Please login.')
-                signup_form = SignupForm(prefix='signup') # Clear form after successful signup.
+                messages.success(request, f"Welcome, {user.first_name}! Your account has been created successfully. Please log in.")
+                signup_form = SignupForm(prefix='signup')  # Reset form after success
+                context['signup_form'] = signup_form
             else:
-                messages.error(request, 'Signup failed. Please correct the errors below.')
-                context['signup_form'] = signup_form # Re-populate
+                errors = signup_form.errors.as_data()
+                for field, error_list in errors.items():
+                    for error in error_list:
+                        messages.error(request, f"{signup_form.fields[field].label}: {error}")
+                context['signup_form'] = signup_form
 
+    # Display messages in the template
+    messages_list = messages.get_messages(request)
+    context['messages'] = messages_list
     return render(request, 'login_register.html', context)
+
 
 def apply_for_job(request, recruitment_id):
     recruitment = get_object_or_404(Recruitment, id=recruitment_id)

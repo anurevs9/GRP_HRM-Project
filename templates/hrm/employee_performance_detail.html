@@ -33,8 +33,6 @@
                                     <th>Review Date</th>
                                     <th>Rating</th>
                                     <th>Feedback</th>
-                                    <th>Goals</th>
-                                    <th>Accomplishments</th>
                                     <th>Reviewed By</th>
                                     <th>Actions</th>
                                 </tr>
@@ -48,8 +46,6 @@
                                     </td>
 
                                     <td>{{ review.feedback|truncatechars:100 }}</td>
-                                    <td>{{ review.goals|truncatechars:100 }}</td>
-                                     <td>{{ review.accomplishments|truncatechars:100 }}</td>
                                     <td>{{ review.reviewed_by.get_full_name|default:"N/A" }}</td>
                                     <td>
                                         <a href="{% url 'core:performance_review_detail' performance_id=review.id %}" class="btn btn-info btn-sm fw-semibold">View Details</a>

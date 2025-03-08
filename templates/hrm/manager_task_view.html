@@ -26,7 +26,7 @@
                         </li>
                         <li class="nav-item">
                             {% if request.employee.id %}
-                                <a class="nav-link fw-bold" href="{% url 'core:performance_review' employee_id=request.employee.id %}">Performance Review</a>
+                                <a class="nav-link fw-bold" href="{% url 'core:performance_review' %}">Performance Review</a>
                             {% else %}
                                 <a class="nav-link fw-bold" href="#" onclick="alert('Please complete your profile to access Performance Review.'); return false;">Performance Review</a>
                             {% endif %}
