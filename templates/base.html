@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Epic HR - {% block title %}{% endblock %}</title>
+  <title>GRP HRMS - {% block title %}{% endblock %}</title>
   <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="{% static 'images/254.jpg' %}">
   <!-- Existing CSS -->
@@ -36,10 +36,10 @@
             </a>
           {% endif %}
           <!-- Holidays -->
-          <a href="{% url 'core:leave_request' %}" class="nav-link {% if 'leave' in request.path %}active{% endif %}">
-            <i class="bi bi-calendar-check"></i>
-            <span>Holidays</span>
-          </a>
+          <a href="{% if request.user.employee.role.name|upper in settings.PAYROLL_ADMIN_ROLES %}{% url 'core:admin_leave_dashboard' %}{% else %}{% url 'core:leave_request' %}{% endif %}" class="nav-link {% if 'leave' in request.path %}active{% endif %}">
+                <i class="bi bi-calendar-check"></i>
+                <span>Holidays</span>
+            </a>
           <!-- Events -->
           <a href="{% url 'core:training_list' %}" class="nav-link {% if 'training' in request.path %}active{% endif %}">
             <i class="bi bi-calendar-event"></i>

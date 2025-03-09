@@ -49,3 +49,11 @@ def mul(value, arg):
 @register.filter
 def split(value, arg):
     return value.split(arg)
+
+@register.filter
+def addclass(field, css_class):
+    if hasattr(field, 'field') and hasattr(field.field, 'widget'):  # Check if it's a BoundField
+        attrs = field.field.widget.attrs
+        attrs['class'] = attrs.get('class', '') + ' ' + css_class.strip()
+        return field
+    return field  # Return unchanged if not a field

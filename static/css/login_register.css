@@ -1,11 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap'); /*!* --- login_register.css --- *!*/
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap');
 
 body {
   min-height: 100vh;
   display: flex;
+  flex-direction: column; /* Changed to column to stack title and container vertically */
   align-items: center;
   justify-content: center;
-  background: #7d2ae8; /* You can customize background color */
+  background: #7d2ae8;
   padding: 30px;
   font-family: "Poppins", sans-serif;
 }
@@ -18,7 +19,7 @@ body {
   padding: 40px 30px;
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
   perspective: 2700px;
-  border-radius: 5px; /* Added border-radius for a softer look */
+  border-radius: 5px;
 }
 
 .cover {
@@ -28,12 +29,11 @@ body {
   height: 100%;
   width: 50%;
   z-index: 98;
-  transition: transform 1s ease; /* Changed to transform for better performance */
+  transition: transform 1s ease;
   transform-origin: left;
   transform-style: preserve-3d;
   backface-visibility: hidden;
-  border-radius: 0 5px 5px 0; /* Match container border-radius */
-  /*overflow: hidden; !* Clip image corners *!*/
+  border-radius: 0 5px 5px 0;
 }
 
 #flip:checked ~ .cover {
@@ -42,14 +42,13 @@ body {
 
 #flip:checked ~ .forms .login-form {
   pointer-events: none;
-  opacity: 0; /* Fade out login form when flipped */
+  opacity: 0;
 }
 
 #flip:checked ~ .forms .signup-form {
-  pointer-events: auto; /* Enable signup form when flipped */
-  opacity: 1;      /* Fade in signup form when flipped */
+  pointer-events: auto;
+  opacity: 1;
 }
-
 
 .cover .front,
 .cover .back {
@@ -81,7 +80,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #fff; /* Default text color to white for better contrast */
+  color: #fff;
 }
 
 .cover .text::before {
@@ -89,22 +88,22 @@ body {
   position: absolute;
   height: 100%;
   width: 100%;
-  opacity: 0.7; /* Slightly darker overlay */
+  opacity: 0.7;
   background: #7d2ae8;
-  border-radius: 0 5px 5px 0; /* Match cover border-radius */
+  border-radius: 0 5px 5px 0;
 }
 
 .cover .text .text-1,
 .cover .text .text-2 {
   z-index: 20;
-  font-size: 24px; /* Slightly smaller font size */
+  font-size: 24px;
   font-weight: 600;
   text-align: center;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Add text shadow for better readability */
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
 
 .cover .text .text-2 {
-  font-size: 14px; /* Slightly smaller secondary text */
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -123,13 +122,13 @@ body {
 .form-content .login-form,
 .form-content .signup-form {
   width: calc(100% / 2 - 25px);
-  padding: 0 20px; /* Add some padding to forms */
+  padding: 0 20px;
 }
 
 .signup-form {
-    opacity: 0;        /* Initially hide signup form */
-    pointer-events: none; /* Disable interactions with signup form */
-    transition: opacity 0.5s ease; /* Fade transition for signup form */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
 }
 
 .forms .form-content .title {
@@ -137,14 +136,14 @@ body {
   font-size: 24px;
   font-weight: 500;
   color: #333;
-  margin-bottom: 20px; /* Add margin below title */
+  margin-bottom: 20px;
 }
 
 .forms .form-content .title:before {
   content: '';
   position: absolute;
   left: 0;
-  bottom: -5px; /* Adjust position of underline */
+  bottom: -5px;
   height: 3px;
   width: 25px;
   background: #7d2ae8;
@@ -155,7 +154,7 @@ body {
 }
 
 .forms .form-content .input-boxes {
-  margin-top: 15px; /* Reduce top margin for input boxes */
+  margin-top: 15px;
 }
 
 .forms .form-content .input-box {
@@ -166,36 +165,34 @@ body {
 .form-content .input-box i {
   position: absolute;
   color: #7d2ae8;
-  font-size: 18px; /* Slightly larger icon */
+  font-size: 18px;
   top: 50%;
   transform: translateY(-50%);
-  left: 10px; /* Adjust icon position */
+  left: 10px;
 }
 
-
-.form-content .input-box .form-control { /* Targeting Bootstrap form-control */
+.form-content .input-box .form-control {
   height: 50px;
   width: 100%;
   outline: none;
   border: none;
-  padding: 0 30px 0 50px; /* Adjusted padding-left to 50px */
+  padding: 0 30px 0 50px;
   font-size: 16px;
   font-weight: 500;
-  border-bottom: 2px solid #ccc; /* Light grey bottom border */
+  border-bottom: 2px solid #ccc;
   transition: border-color 0.3s ease;
 }
 
 .form-content .input-box .form-control:focus {
   border-color: #7d2ae8;
-  box-shadow: none; /* Remove default focus shadow */
+  box-shadow: none;
 }
-
 
 .forms .form-content .text {
   font-size: 14px;
   font-weight: 500;
-  color: #555; /* Darker grey text */
-  margin-top: 10px; /* Add margin to text links */
+  color: #555;
+  margin-top: 10px;
 }
 
 .forms .form-content .text a {
@@ -208,10 +205,10 @@ body {
 }
 
 .forms .form-content .button {
-  margin-top: 25px; /* Reduce margin for button */
+  margin-top: 25px;
 }
 
-.forms .form-content .button .btn { /* Targeting Bootstrap button */
+.forms .form-content .button .btn {
   width: 100%;
   padding: 10px 20px;
   font-size: 18px;
@@ -222,15 +219,14 @@ body {
   transition: background-color 0.4s ease;
 }
 
-.forms .form-content .button .btn-primary { /* Style for primary button */
+.forms .form-content .button .btn-primary {
   background: #7d2ae8;
   color: #fff;
 }
 
 .forms .form-content .button .btn-primary:hover {
-  background: #5b13b9; /* Darker shade on hover */
+  background: #5b13b9;
 }
-
 
 .forms .form-content label {
   color: #5b13b9;
@@ -244,50 +240,81 @@ body {
 .forms .form-content .login-text,
 .forms .form-content .sign-up-text {
   text-align: center;
-  margin-top: 20px; /* Reduce margin for sign up/login text */
+  margin-top: 20px;
 }
 
 #flip {
   display: none;
 }
 
-/* Responsive adjustments - using Bootstrap breakpoints is recommended for a full Bootstrap integration */
-@media (max-width: 768px) { /* Adjust breakpoint as needed */
+/* Responsive adjustments */
+@media (max-width: 768px) {
   .container {
-    max-width: 95%; /* Make container wider on smaller screens */
-    padding: 30px 20px; /* Reduce padding on smaller screens */
+    max-width: 95%;
+    padding: 30px 20px;
   }
 
   .cover {
-    display: none; /* Hide cover on smaller screens */
+    display: none;
   }
 
   .form-content {
-    flex-direction: column; /* Stack forms vertically */
+    flex-direction: column;
   }
 
   .form-content .login-form,
   .form-content .signup-form {
-    width: 100%; /* Forms take full width on smaller screens */
-    padding: 0; /* Remove padding for forms on smaller screens */
-    margin-bottom: 20px; /* Add margin between stacked forms */
+    width: 100%;
+    padding: 0;
+    margin-bottom: 20px;
   }
 
   .signup-form {
-    display: block; /* Always show signup form in stacked view */
-    opacity: 1;     /* Make signup form visible */
-    pointer-events: auto; /* Enable signup form */
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
   }
 
   #flip:checked ~ .forms .signup-form {
-    display: block; /* Ensure signup is visible when checked (though cover is hidden now) */
+    display: block;
   }
 
   #flip:checked ~ .forms .login-form {
-    display: none; /* Hide login when flipped (though not really flipping in stacked view) */
+    display: none;
   }
 
   .forms .form-content .title {
-    text-align: center; /* Center titles in stacked view */
+    text-align: center;
+  }
+}
+
+/* Styles for the GRP HRMS Title with Animation */
+.main-title {
+  font-size: 48px;
+  font-weight: 700;
+  color: #f1c40f; /* Vibrant yellow for contrast against purple */
+  text-align: center;
+  margin-bottom: 30px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); /* Subtle shadow for depth */
+  animation: slideDown 1.5s ease-in-out forwards;
+}
+
+/* Animation Keyframes */
+@keyframes slideDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustment for the title */
+@media (max-width: 768px) {
+  .main-title {
+    font-size: 36px;
+    margin-bottom: 20px;
   }
 }

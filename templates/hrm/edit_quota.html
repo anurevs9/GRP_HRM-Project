@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}
+{% if request.user.employee.role.name == 'ADMIN' %}
+Edit Admin Leave Quota
+{% elif request.user.employee.role.name == 'MANAGER' %}
+Edit Manager Leave Quota
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="background: linear-gradient(135deg, #e0f7fa 0%, #a3d8f4 100%); min-height: 100vh;">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0" style="animation: fadeIn 0.5s ease-in-out;">
+                <div class="card-header bg-info text-white">
+                    <h2 class="mb-0">
+                        {% if request.user.employee.role.name == 'ADMIN' %}
+                            Edit Admin Leave Quota for {{ employee.user.get_full_name }}
+                        {% elif request.user.employee.role.name == 'MANAGER' %}
+                            Edit Manager Leave Quota for {{ employee.user.get_full_name }}
+                        {% endif %}
+                    </h2>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-12 mb-3">
+                                <label for="{{ form.employee.id_for_label }}" class="form-label fw-medium">Employee</label>
+                                {{ form.employee|addclass:"form-control" }}
+                                <input type="hidden" name="employee" value="{{ employee.id }}">
+                                {% if form.employee.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.employee.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.sl_quota.id_for_label }}" class="form-label fw-medium">Enter SL Quota</label>
+                                {{ form.sl_quota|addclass:"form-control" }}
+                                {% if form.sl_quota.help_text %}
+                                    <small class="form-text text-muted">{{ form.sl_quota.help_text }}</small>
+                                {% endif %}
+                                {% if form.sl_quota.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.sl_quota.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.pl_quota.id_for_label }}" class="form-label fw-medium">Enter PL Quota</label>
+                                {{ form.pl_quota|addclass:"form-control" }}
+                                {% if form.pl_quota.help_text %}
+                                    <small class="form-text text-muted">{{ form.pl_quota.help_text }}</small>
+                                {% endif %}
+                                {% if form.pl_quota.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.pl_quota.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.cl_quota.id_for_label }}" class="form-label fw-medium">Enter CL Quota</label>
+                                {{ form.cl_quota|addclass:"form-control" }}
+                                {% if form.cl_quota.help_text %}
+                                    <small class="form-text text-muted">{{ form.cl_quota.help_text }}</small>
+                                {% endif %}
+                                {% if form.cl_quota.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.cl_quota.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">Save</button>
+                            <a href="{% url 'core:add_leave_quota' %}" class="btn btn-secondary btn-lg">Back to Leave Quota</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .card {
+        border-radius: 15px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    .form-label {
+        font-weight: 500;
+    }
+    .form-control {
+        border-radius: 5px;
+        transition: border-color 0.3s ease;
+    }
+    .form-control:disabled {
+        background-color: #e9ecef;
+        opacity: 1;
+    }
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    .invalid-feedback {
+        font-size: 0.875rem;
+    }
+    .alert {
+        border-radius: 5px;
+    }
+    .text-muted {
+        color: #6c757d !important;
+    }
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1.1rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

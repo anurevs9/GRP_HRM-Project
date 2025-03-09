@@ -7,7 +7,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.core.paginator import PageNotAnInteger, Paginator, EmptyPage
-from django.db.models import Q, Avg, Max
+from django.db.models import Q, Avg, Max, Sum
 from django.db.models.functions import ExtractMonth
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -44,6 +44,7 @@ def employee_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
+
 @employee_required
 def dashboard(request):
     try:
@@ -61,11 +62,14 @@ def dashboard(request):
         performances = Performance.objects.all()  # For Admin: all performance reviews
     elif request.employee.role.name in ['MANAGER', 'TEAM_LEADER']:
         all_employees = Employee.objects.filter(reporting_manager=request.employee)
-        assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').filter(employee__in=all_employees)
-        performances = Performance.objects.filter(employee__in=all_employees)  # For Manager/TL: reviews of reporting employees
+        assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').filter(
+            employee__in=all_employees)
+        performances = Performance.objects.filter(
+            employee__in=all_employees)  # For Manager/TL: reviews of reporting employees
     else:  # EMPLOYEE
         all_employees = Employee.objects.filter(id=request.employee.id)
-        assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').filter(employee=request.employee)
+        assignments_queryset = TaskAssignment.objects.select_related('employee__user', 'task').filter(
+            employee=request.employee)
         performances = Performance.objects.filter(employee=request.employee)  # For Employee: their own reviews
 
     # Apply task filters (same as before)
@@ -86,7 +90,8 @@ def dashboard(request):
             date_to_end = timezone.make_aware(datetime.combine(date_to_dt, time.max))
             assignments_queryset = assignments_queryset.filter(assigned_date__range=[date_from_start, date_to_end])
         except ValueError as e:
-            messages.error(request, f"Invalid date format for Date From or Date To. Please use YYYY-MM-DD. Error: {str(e)}")
+            messages.error(request,
+                           f"Invalid date format for Date From or Date To. Please use YYYY-MM-DD. Error: {str(e)}")
     elif date_from or date_to:
         messages.warning(request, "Please provide both Date From and Date To for date filtering.")
 
@@ -115,6 +120,31 @@ def dashboard(request):
         'rating_9_10': performances.filter(rating__gte=9).count(),
     }
 
+    # Fetch leave balances for the logged-in employee
+    leave_quotas = LeaveQuota.objects.filter(employee=request.employee)
+
+    # Structure leave balance data for the template
+    leave_balance = {
+        'SL': {'total': 0, 'remaining': 0, 'used': 0},
+        'PL': {'total': 0, 'remaining': 0, 'used': 0},
+        'CL': {'total': 0, 'remaining': 0, 'used': 0},
+    }
+
+    for quota in leave_quotas:
+        leave_type = quota.leave_type
+        if leave_type in leave_balance:
+            # Adjust based on your LeaveQuota model fields
+            # Assuming fields are total_quota, remain_quota, used_quota
+            total = quota.total_quota if hasattr(quota, 'total_quota') else (
+                quota.quota if hasattr(quota, 'quota') else 0)
+            remaining = quota.remain_quota if hasattr(quota, 'remain_quota') else 0
+            used = quota.used_quota if hasattr(quota, 'used_quota') else (total - remaining)
+            leave_balance[leave_type] = {
+                'total': total,
+                'remaining': remaining,
+                'used': used,
+            }
+
     context = {
         'today': timezone.now(),
         'total_employees': Employee.objects.count(),
@@ -123,11 +153,7 @@ def dashboard(request):
         'pending_leaves': Leave.objects.filter(status='PENDING').count(),
         'upcoming_trainings': Training.objects.filter(start_date__gte=timezone.now()).order_by('start_date')[:3],
         'today_attendance': Attendance.objects.filter(employee=request.employee, date=timezone.now().date()).first(),
-        'leave_balance': {
-            'annual': 20,
-            'sick': 10,
-            'casual': 5
-        },
+        'leave_balance': leave_balance,  # Updated leave balance data
         'announcements': [],
         'trainer_trainings': trainer_trainings,
         'participant_trainings': participant_trainings,
@@ -141,7 +167,7 @@ def dashboard(request):
         'performance_stats': performance_stats,  # Add performance stats to context
     }
 
-    # Performance data for charts (same as before)
+    # Performance data for charts
     performance_data = Performance.objects.filter(employee=request.employee).order_by('review_date')
     monthly_ratings = Performance.objects.filter(employee=request.employee).annotate(
         month=ExtractMonth('review_date')
@@ -167,34 +193,289 @@ def employee_list(request):
     return render(request, 'hrm/employee_list.html', {'employees': employees}) # Assuming core/employee_list.html
 
 
-# ... your decorator ...
-@employee_required
+@login_required
 def leave_request(request):
-    print("Leave Request View Function Called!")  # Debug print at the start
+    employee = request.user.employee
+    # Redirect both ADMIN and MANAGER to admin_leave_dashboard
+    if employee.role.name in ['ADMIN', 'MANAGER']:
+        return redirect('core:admin_leave_dashboard')
 
     if request.method == 'POST':
-        print("Request method is POST") # Debug print for POST request
         form = LeaveRequestForm(request.POST)
         if form.is_valid():
-            print("Form is valid!") # Debug print if form is valid
             leave = form.save(commit=False)
-            leave.employee = request.employee
-            leave.status = 'PENDING'  # Set initial status
-            leave.save()
-            messages.success(request, 'Leave request submitted successfully.')
-            return redirect('core:leave_request')  # Redirect - adjust app name if needed
+            leave.employee = employee
+            leave.status = 'PENDING'
+            quota = LeaveQuota.objects.get_or_create(employee=employee, leave_type=leave.leave_type)[0]
+            if quota.remain_quota < leave.total_days:
+                messages.error(request,
+                               f"Insufficient {leave.get_leave_type_display} balance. Remaining: {quota.remain_quota} days.")
+            else:
+                leave.save()
+                quota.used_quota += leave.total_days
+                quota.remain_quota -= leave.total_days
+                quota.save()
+                messages.success(request, 'Leave request submitted successfully.')
+            return redirect('core:leave_request')
         else:
-            print("Form is NOT valid!") # Debug print if form is invalid
-            print(form.errors)       # Print form errors to console
+            print(form.errors)
     else:
-        print("Request method is GET") # Debug print for GET request
-        form = LeaveRequestForm(initial={'employee': request.employee})
+        form = LeaveRequestForm()
 
-    leave_history = Leave.objects.filter(employee=request.employee).order_by('-applied_on')
-    return render(request, 'hrm/leave_request.html', { # Assuming core/leave_request.html
+    leave_history = Leave.objects.filter(employee=employee).order_by('-created_at')
+    paginator = Paginator(leave_history, 5)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    leave_balances = {
+        'PL': LeaveQuota.objects.get_or_create(employee=employee, leave_type='PL')[0].remain_quota,
+        'CL': LeaveQuota.objects.get_or_create(employee=employee, leave_type='CL')[0].remain_quota,
+        'SL': LeaveQuota.objects.get_or_create(employee=employee, leave_type='SL')[0].remain_quota,
+    }
+    return render(request, 'hrm/employee_leave_dashboard.html', {
         'form': form,
-        'leave_history': leave_history
+        'leave_history': page_obj,
+        'leave_balances': leave_balances,
+        'user_role': employee.role.name  # Pass the user's role to the template
     })
+
+
+@login_required
+def apply_leave(request):
+    employee = request.user.employee
+    if request.method == 'POST':
+        form = LeaveRequestForm(request.POST)
+        if form.is_valid():
+            leave = form.save(commit=False)
+            leave.employee = employee
+            leave.status = 'PENDING'
+            quota = LeaveQuota.objects.get_or_create(employee=employee, leave_type=leave.leave_type)[0]
+            if quota.remain_quota < leave.total_days:
+                messages.error(request,
+                               f"Insufficient {leave.get_leave_type_display} balance. Remaining: {quota.remain_quota} days.")
+            else:
+                leave.save()
+                quota.used_quota += leave.total_days
+                quota.remain_quota -= leave.total_days
+                quota.save()
+                messages.success(request, 'Leave request submitted successfully.')
+                return redirect('core:leave_request')
+        else:
+            print(form.errors)  # Debug form errors
+    else:
+        form = LeaveRequestForm()
+
+    leave_balances = {
+        'PL': LeaveQuota.objects.get_or_create(employee=employee, leave_type='PL')[0].remain_quota,
+        'CL': LeaveQuota.objects.get_or_create(employee=employee, leave_type='CL')[0].remain_quota,
+        'SL': LeaveQuota.objects.get_or_create(employee=employee, leave_type='SL')[0].remain_quota,
+    }
+    return render(request, 'hrm/apply_leave.html', {
+        'form': form,
+        'leave_balances': leave_balances,
+    })
+
+
+@login_required
+def admin_leave_dashboard(request):
+    if request.user.employee.role.name not in ['ADMIN', 'MANAGER']:
+        return redirect('core:leave_request')
+
+    admin_leaves = Leave.objects.filter(employee=request.user.employee).order_by('-created_at')
+    reportees_leaves = Leave.objects.exclude(employee=request.user.employee).filter(status='PENDING').order_by(
+        '-created_at')
+
+    paginator_admin = Paginator(admin_leaves, 5)
+    paginator_reportees = Paginator(reportees_leaves, 5)
+    page_number_admin = request.GET.get('page_admin')
+    page_number_reportees = request.GET.get('page_reportees')
+    admin_leave_history = paginator_admin.get_page(page_number_admin)
+    reportees_leave_history = paginator_reportees.get_page(page_number_reportees)
+
+    total_pl = \
+    LeaveQuota.objects.filter(leave_type='PL', employee=request.user.employee).aggregate(total=Sum('remain_quota'))[
+        'total'] or 0
+    total_cl = \
+    LeaveQuota.objects.filter(leave_type='CL', employee=request.user.employee).aggregate(total=Sum('remain_quota'))[
+        'total'] or 0
+    total_sl = \
+    LeaveQuota.objects.filter(leave_type='SL', employee=request.user.employee).aggregate(total=Sum('remain_quota'))[
+        'total'] or 0
+
+    return render(request, 'hrm/admin_leave_dashboard.html', {
+        'admin_leave_history': admin_leave_history,
+        'reportees_leave_history': reportees_leave_history,
+        'total_pl': total_pl,
+        'total_cl': total_cl,
+        'total_sl': total_sl,
+        'user_role': request.user.employee.role.name  # Pass the role to the template
+    })
+
+# core/views.py
+@employee_required
+def edit_leave(request, leave_id):
+    leave = get_object_or_404(Leave, leaveid=leave_id)
+    if leave.employee.user != request.user or leave.status != 'PENDING':
+        messages.error(request, 'You cannot edit this leave request.')
+        return redirect('core:leave_request')
+
+    if request.method == 'POST':
+        form = LeaveRequestForm(request.POST, instance=leave)
+        if form.is_valid():
+            leave = form.save(commit=False)
+            delta = leave.end_date - leave.start_date
+            leave.total_days = delta.days + 1
+            leave.save()
+            messages.success(request, 'Leave request updated successfully.')
+            return redirect('core:dashboard')
+    else:
+        form = LeaveRequestForm(instance=leave)
+    return render(request, 'hrm/edit_leave.html', {'form': form})
+
+
+@login_required
+def delete_leave(request, leave_id):
+    leave = get_object_or_404(Leave, leaveid=leave_id)
+    logger.debug(f"Attempting to delete leave with ID: {leave_id}, Status: {leave.status}")
+
+    if request.method == 'POST':
+        logger.debug("POST request received, proceeding with deletion")
+        # Restore quota if the leave was approved
+        if leave.status == 'APPROVED':
+            quota = LeaveQuota.objects.get_or_create(employee=leave.employee, leave_type=leave.leave_type)[0]
+            quota.remain_quota += leave.total_days
+            quota.used_quota -= leave.total_days
+            quota.save()
+            logger.debug(f"Quota updated for leave type {leave.leave_type}")
+        leave.delete()
+        logger.debug("Leave deleted successfully")
+        messages.success(request, 'Leave request deleted successfully.')
+        return redirect('core:admin_leave_dashboard')
+
+    logger.debug("Rendering confirmation page")
+    return render(request, 'hrm/comfirm_delete.html', {'leave': leave})
+
+
+@login_required
+def add_leave_quota(request):
+    # Check if the user has permission to access this page
+    if request.user.employee.role.name not in ['ADMIN', 'MANAGER']:
+        messages.warning(request, 'You do not have permission to view this page.')
+        return redirect('core:leave_request')
+
+    if request.method == 'POST':
+        form = LeaveQuotaForm(request.POST, is_edit=False)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Leave quotas updated successfully.')
+            return redirect('core:add_leave_quota')
+    else:
+        form = LeaveQuotaForm(is_edit=False)
+
+    # Fetch all employees and construct employee_quotas list
+    employees = Employee.objects.all()
+    employee_quotas = []
+    for emp in employees:
+        sl_quota = LeaveQuota.objects.filter(employee=emp, leave_type='SL').first()
+        pl_quota = LeaveQuota.objects.filter(employee=emp, leave_type='PL').first()
+        cl_quota = LeaveQuota.objects.filter(employee=emp, leave_type='CL').first()
+        employee_quotas.append({
+            'employee': emp,
+            'sl_quota': sl_quota.remain_quota if sl_quota else 0,
+            'pl_quota': pl_quota.remain_quota if pl_quota else 0,
+            'cl_quota': cl_quota.remain_quota if cl_quota else 0,
+            'quotaid': emp.id  # Note: Using emp.id as quotaid; adjust if this should be LeaveQuota's ID
+        })
+
+    # Add pagination
+    paginator = Paginator(employee_quotas, 5)  # Show 5 quotas per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'hrm/add_leave_quote.html', {
+        'form': form,
+        'employee_quotas': page_obj,  # Pass the paginated Page object
+    })
+
+
+@login_required
+def approve_reject_leave(request, leave_id):
+    leave = get_object_or_404(Leave, leaveid=leave_id)
+    if request.method == 'POST':
+        status = request.POST.get('status')
+        if status in ['APPROVED', 'REJECTED']:
+            leave.status = status
+            leave.save()
+            if status == 'APPROVED':
+                quota = LeaveQuota.objects.get_or_create(employee=leave.employee, leave_type=leave.leave_type)[0]
+                quota.remain_quota -= leave.total_days
+                quota.used_quota += leave.total_days
+                quota.save()
+            messages.success(request, f'Leave {status.lower()} successfully.')
+            return redirect('core:admin_leave_dashboard')
+    return render(request, 'hrm/approve_reject_leave.html', {'leave': leave})
+
+@login_required
+def update_admin_leave_status(request, leave_id):
+    leave = get_object_or_404(Leave, leaveid=leave_id, employee=request.user.employee)
+    if request.method == 'POST':
+        status = request.POST.get('status')
+        if status in ['APPROVED', 'REJECTED', 'CANCELLED']:  # Added CANCELLED as an option for admin
+            leave.status = status
+            leave.save()
+            if status == 'APPROVED':
+                quota = LeaveQuota.objects.get_or_create(employee=leave.employee, leave_type=leave.leave_type)[0]
+                quota.remain_quota -= leave.total_days
+                quota.used_quota += leave.total_days
+                quota.save()
+            elif status == 'CANCELLED':
+                quota = LeaveQuota.objects.get_or_create(employee=leave.employee, leave_type=leave.leave_type)[0]
+                quota.remain_quota += leave.total_days
+                quota.used_quota -= leave.total_days
+                quota.save()
+            messages.success(request, f'Leave {status.lower()} successfully.')
+            return redirect('core:admin_leave_dashboard')
+    return render(request, 'hrm/approve_reject_leave.html', {'leave': leave})
+
+
+@login_required
+def edit_quota(request, quotaid):
+    if request.user.employee.role.name not in ['ADMIN', 'MANAGER']:
+        messages.warning(request, 'You do not have permission to view this page.')
+        return redirect('core:leave_request')
+
+    employee = get_object_or_404(Employee, id=quotaid)
+    sl_quota = LeaveQuota.objects.filter(employee=employee, leave_type='SL').first()
+    pl_quota = LeaveQuota.objects.filter(employee=employee, leave_type='PL').first()
+    cl_quota = LeaveQuota.objects.filter(employee=employee, leave_type='CL').first()
+
+    initial_data = {
+        'employee': employee,
+        'sl_quota': sl_quota.remain_quota if sl_quota else 0,
+        'pl_quota': pl_quota.remain_quota if pl_quota else 0,
+        'cl_quota': cl_quota.remain_quota if cl_quota else 0,
+    }
+
+    if request.method == 'POST':
+        form = LeaveQuotaForm(request.POST, is_edit=True, employee_instance=employee)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Leave quotas updated successfully.')
+            return redirect('core:add_leave_quota')
+    else:
+        form = LeaveQuotaForm(initial=initial_data, is_edit=True, employee_instance=employee)
+        return render(request, 'hrm/edit_quota.html', {'form': form, 'employee': employee})
+
+@employee_required
+def delete_quota(request, quotaid):
+    if request.employee.role.name not in 'settings.PAYROLL_ADMIN_ROLES':
+        messages.error(request, 'You do not have permission to delete quotas.')
+        return redirect('core:add_leave_quota')
+    quota = get_object_or_404(LeaveQuota, quotaid=quotaid)
+    if request.method == 'POST':
+        quota.delete()
+        messages.success(request, 'Leave quota deleted successfully.')
+        return redirect('core:add_leave_quota')
+    return render(request, 'hrm/delete_quota.html', {'quota': quota})
 
 @employee_required
 def performance_review(request):
@@ -1558,26 +1839,28 @@ def login_register_view(request):
             if login_form.is_valid():
                 user = login_form.save(request)
                 if user:
-                    messages.success(request, f"Welcome back, {user.first_name}! Login successful.", extra_tags='login-success')
+                    messages.success(request, f"Welcome back, {user.first_name or user.username}! Login successful.", extra_tags='login-success')
                     return redirect('core:dashboard')
                 else:
                     messages.error(request, "Authentication failed. Please check your credentials.")
             else:
                 errors = login_form.errors.as_data()
                 if 'username' in errors:
-                    messages.error(request, "Please enter a valid email address.")
+                    for error in errors['username']:
+                        messages.error(request, str(error))
                 if 'password' in errors:
-                    messages.error(request, "Password field cannot be empty.")
+                    for error in errors['password']:
+                        messages.error(request, str(error))
                 if '__all__' in errors:
                     for error in errors['__all__']:
                         messages.error(request, str(error))
                 context['login_form'] = login_form
-
+        # ... (signup logic unchanged)
         elif 'signup_submit' in request.POST:
             signup_form = SignupForm(request.POST, prefix='signup')
             if signup_form.is_valid():
                 user = signup_form.save()
-                messages.success(request, f"Welcome, {user.first_name}! Your account has been created successfully. Please log in.")
+                messages.success(request, f"Welcome, {user.first_name or user.username}! Your account has been created successfully. Please log in.")
                 signup_form = SignupForm(prefix='signup')  # Reset form after success
                 context['signup_form'] = signup_form
             else:
@@ -1587,7 +1870,6 @@ def login_register_view(request):
                         messages.error(request, f"{signup_form.fields[field].label}: {error}")
                 context['signup_form'] = signup_form
 
-    # Display messages in the template
     messages_list = messages.get_messages(request)
     context['messages'] = messages_list
     return render(request, 'login_register.html', context)

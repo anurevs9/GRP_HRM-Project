@@ -10,7 +10,7 @@ from django.contrib.auth import authenticate, login
 
 from .models import (
     Employee, Department, Role, Task, Leave, Performance,
-    Recruitment, Candidate, Training, Payroll, Attendance, TaskAssignment
+    Recruitment, Candidate, Training, Payroll, Attendance, TaskAssignment, LeaveQuota
 )
 
 
@@ -364,10 +364,8 @@ class AttendanceForm(forms.ModelForm):
 class LeaveRequestForm(forms.ModelForm):
     class Meta:
         model = Leave
-        # REMOVE 'employee' and 'status' from the fields list:
         fields = ['leave_type', 'start_date', 'end_date', 'reason']
         widgets = {
-            # REMOVE the 'employee' widget as it's no longer a form field:
             'start_date': forms.DateInput(attrs={'type': 'date'}),
             'end_date': forms.DateInput(attrs={'type': 'date'}),
             'reason': forms.Textarea(attrs={'rows': 3}),
@@ -383,14 +381,164 @@ class LeaveRequestForm(forms.ModelForm):
                 raise forms.ValidationError("End date cannot be earlier than start date.")
         return cleaned_data
 
+class LeaveForm(forms.ModelForm):
+    class Meta:
+        model = Leave
+        fields = ['employee', 'leave_type', 'reason', 'start_date', 'end_date', 'status', 'approved_by']
+        widgets = {
+            'employee': forms.Select(attrs={'class': 'form-control'}),
+            'leave_type': forms.Select(attrs={'class': 'form-control'}),
+            'reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
+            'approved_by': forms.Select(attrs={'class': 'form-control'}),
+        }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        status = cleaned_data.get('status')
+        approved_by = cleaned_data.get('approved_by')
 
+        # Validate date range
+        if start_date and end_date:
+            if end_date < start_date:
+                raise forms.ValidationError("End date cannot be earlier than start date.")
+
+        # Validate approved_by when status is APPROVED
+        if status == 'APPROVED' and not approved_by:
+            raise forms.ValidationError("Approved by is required when status is set to 'Approved'.")
+        if approved_by and status != 'APPROVED':
+            raise forms.ValidationError("Approved by can only be set when status is 'Approved'.")
+
+        return cleaned_data
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Limit approved_by to employees with MANAGER, ADMIN, or HR roles
+        self.fields['approved_by'].queryset = Employee.objects.filter(
+            role__name__in=['ADMIN', 'MANAGER', 'HR']
+        ).distinct()
+
+class LeaveQuotaForm(forms.ModelForm):
+    sl_quota = forms.IntegerField(
+        label='Enter SL Quota',
+        required=False,
+        min_value=0,
+        help_text='Leave blank to keep existing quota.'
+    )
+    pl_quota = forms.IntegerField(
+        label='Enter PL Quota',
+        required=False,
+        min_value=0,
+        help_text='Leave blank to keep existing quota.'
+    )
+    cl_quota = forms.IntegerField(
+        label='Enter CL Quota',
+        required=False,
+        min_value=0,
+        help_text='Leave blank to keep existing quota.'
+    )
+
+    class Meta:
+        model = LeaveQuota
+        fields = ['employee']
+
+    def __init__(self, *args, **kwargs):
+        self.is_edit = kwargs.pop('is_edit', False)
+        self.employee_instance = kwargs.pop('employee_instance', None)  # Pass the employee instance for edit
+        super().__init__(*args, **kwargs)
+        if self.is_edit:
+            self.fields['employee'].disabled = True
+            # Pre-populate employee field with initial value
+            if self.employee_instance:
+                self.fields['employee'].initial = self.employee_instance
+                self.instance.employee = self.employee_instance  # Set the instance.employee
+
+    def clean_employee(self):
+        # Skip validation for the employee field if it's disabled (in edit mode)
+        if self.is_edit and self.employee_instance:
+            return self.employee_instance
+        return self.cleaned_data['employee']
+
+    def clean(self):
+        cleaned_data = super().clean()
+        for field in ['sl_quota', 'pl_quota', 'cl_quota']:
+            if field in cleaned_data and cleaned_data[field] is not None and cleaned_data[field] < 0:
+                raise forms.ValidationError(f"{field.replace('_', ' ').title()} cannot be negative.")
+        return cleaned_data
+
+    def save(self, *args, **kwargs):
+        instance = super().save(commit=False)
+        employee = instance.employee
+        for leave_type, quota_field in [('SL', 'sl_quota'), ('PL', 'pl_quota'), ('CL', 'cl_quota')]:
+            quota_value = self.cleaned_data.get(quota_field)
+            if quota_value is not None:
+                LeaveQuota.objects.update_or_create(
+                    employee=employee,
+                    leave_type=leave_type,
+                    defaults={
+                        'total_quota': quota_value,
+                        'used_quota': 0,
+                        'remain_quota': quota_value
+                    }
+                )
+        return instance
+
+class LeaveQuotaStatusForm(forms.ModelForm):
+    class Meta:
+        model = LeaveQuota
+        fields = ['status']
+        widgets = {
+            'status': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Restrict to PENDING quotas for approval/rejection
+        if 'instance' in kwargs:
+            self.fields['status'].queryset = LeaveQuota.objects.filter(status='PENDING')
+
+class LeaveApprovalForm(forms.ModelForm):
+    class Meta:
+        model = Leave
+        fields = ['employee', 'leave_type', 'reason', 'start_date', 'end_date', 'status', 'approved_by']
+        widgets = {
+            'employee': forms.Select(attrs={'class': 'form-control', 'disabled': 'disabled'}),
+            'leave_type': forms.Select(attrs={'class': 'form-control', 'disabled': 'disabled'}),
+            'reason': forms.Textarea(attrs={'class': 'form-control', 'disabled': 'disabled'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'disabled': 'disabled'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'disabled': 'disabled'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
+            'approved_by': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['employee'].queryset = Employee.objects.filter(id=self.instance.employee_id)
+            self.fields['approved_by'].queryset = Employee.objects.filter(role__name__in=['ADMIN', 'MANAGER'])
+            self.fields['status'].choices = [('', '---------'), ('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected')]
+            # Mark disabled fields as not required for updates
+            for field_name in ['employee', 'leave_type', 'reason', 'start_date', 'end_date']:
+                self.fields[field_name].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Ensure disabled fields retain their original values
+        if self.instance.pk:
+            for field_name in ['employee', 'leave_type', 'reason', 'start_date', 'end_date']:
+                if field_name not in cleaned_data or not cleaned_data[field_name]:
+                    cleaned_data[field_name] = getattr(self.instance, field_name)
+        return cleaned_data
 
 class LoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['username'].widget.attrs.update({
-            'placeholder': 'Enter your email',
+            'placeholder': 'Enter your username or email',
             'class': 'form-control'
         })
         self.fields['password'].widget.attrs.update({
@@ -399,26 +547,40 @@ class LoginForm(AuthenticationForm):
         })
 
     def clean(self):
-        cleaned_data = super().clean()
-        username = cleaned_data.get('username')
-        password = cleaned_data.get('password')
+        # Don’t call super().clean() to avoid default authentication
+        username_or_email = self.cleaned_data.get('username')
+        password = self.cleaned_data.get('password')
 
-        if username and password:
-            user = authenticate(username=username, password=password)
-            if user is None:
+        if not username_or_email:
+            raise forms.ValidationError("Username or email is required.")
+        if not password:
+            raise forms.ValidationError("Password is required.")
+
+        if '@' in username_or_email:
+            try:
+                user = User.objects.get(email=username_or_email.lower())
+                username = user.username
+            except User.DoesNotExist:
                 raise forms.ValidationError(
-                    "Invalid email or password. Please check your credentials and try again."
+                    "No account found with this email. Please check your input or sign up."
                 )
-            if not user.is_active:
-                raise forms.ValidationError(
-                    "This account is inactive. Please contact support."
-                )
-        return cleaned_data
+        else:
+            username = username_or_email
+
+        user = authenticate(request=self.request, username=username, password=password)
+        if user is None:
+            raise forms.ValidationError(
+                "Invalid username/email or password. Please check your credentials and try again."
+            )
+        if not user.is_active:
+            raise forms.ValidationError(
+                "This account is inactive. Please contact support."
+            )
+        self.cleaned_data['user'] = user
+        return self.cleaned_data
 
     def save(self, request):
-        username = self.cleaned_data.get('username')
-        password = self.cleaned_data.get('password')
-        user = authenticate(request, username=username, password=password)
+        user = self.cleaned_data.get('user')
         if user is not None:
             login(request, user)
             return user

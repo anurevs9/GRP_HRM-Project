@@ -14,7 +14,19 @@ urlpatterns = [
     path('edit-profile/', views.edit_profile, name='edit_profile'),
     path('login-register/', views.login_register_view, name='login_register'),
     path('tasks/', RedirectView.as_view(url=reverse_lazy('core:admin_task_view')), name='task_list'),
+    # Leave Request and Management
     path('leave-request/', views.leave_request, name='leave_request'),
+    path('apply-leave/', views.apply_leave, name='apply_leave'),
+    path('edit-leave/<int:leave_id>/', views.edit_leave, name='edit_leave'),
+    path('delete-leave/<int:leave_id>/', views.delete_leave, name='delete_leave'),
+    path('approve-reject-leave/<int:leave_id>/', views.approve_reject_leave, name='approve_reject_leave'),
+    path('admin-leave-dashboard/', views.admin_leave_dashboard, name='admin_leave_dashboard'),
+    path('update-admin-leave-status/<int:leave_id>/', views.update_admin_leave_status, name='update_admin_leave_status'),
+
+    # Leave Quota Management
+    path('add-leave-quota/', views.add_leave_quota, name='add_leave_quota'),
+    path('edit-quota/<int:quotaid>/', views.edit_quota, name='edit_quota'),
+    path('delete-quota/<int:quotaid>/', views.delete_quota, name='delete_quota'),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('verify-otp/', views.verify_otp, name='verify_otp'),
     path('reset-password/', views.reset_password, name='reset_password'),

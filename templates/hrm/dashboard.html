@@ -335,24 +335,57 @@
                     </div>
                 </div>
 
-                <!-- Leave Balance Card -->
+                <!-- Leave Balance Card (Updated) -->
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="mb-0">Leave Balance</h5>
                     </div>
                     <div class="card-body">
                         <div class="leave-balance-chart">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span>Annual Leave</span>
-                                <span class="badge bg-primary">{{ leave_balance.annual }} days</span>
+                            <!-- Sick Leave (SL) -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span>Sick Leave (SL)</span>
+                                    <span class="badge bg-info">{{ leave_balance.SL.remaining }} / {{ leave_balance.SL.total }} days</span>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar bg-info" role="progressbar"
+                                         style="width: {% widthratio leave_balance.SL.remaining leave_balance.SL.total 100 %}%;"
+                                         aria-valuenow="{{ leave_balance.SL.remaining }}"
+                                         aria-valuemin="0"
+                                         aria-valuemax="{{ leave_balance.SL.total }}">
+                                    </div>
+                                </div>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span>Sick Leave</span>
-                                <span class="badge bg-info">{{ leave_balance.sick }} days</span>
+                            <!-- Privileged Leave (PL) -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span>Privileged Leave (PL)</span>
+                                    <span class="badge bg-primary">{{ leave_balance.PL.remaining }} / {{ leave_balance.PL.total }} days</span>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar bg-primary" role="progressbar"
+                                         style="width: {% widthratio leave_balance.PL.remaining leave_balance.PL.total 100 %}%;"
+                                         aria-valuenow="{{ leave_balance.PL.remaining }}"
+                                         aria-valuemin="0"
+                                         aria-valuemax="{{ leave_balance.PL.total }}">
+                                    </div>
+                                </div>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span>Casual Leave</span>
-                                <span class="badge bg-success">{{ leave_balance.casual }} days</span>
+                            <!-- Casual Leave (CL) -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span>Casual Leave (CL)</span>
+                                    <span class="badge bg-success">{{ leave_balance.CL.remaining }} / {{ leave_balance.CL.total }} days</span>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar bg-success" role="progressbar"
+                                         style="width: {% widthratio leave_balance.CL.remaining leave_balance.CL.total 100 %}%;"
+                                         aria-valuenow="{{ leave_balance.CL.remaining }}"
+                                         aria-valuemin="0"
+                                         aria-valuemax="{{ leave_balance.CL.total }}">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="text-center mt-3">

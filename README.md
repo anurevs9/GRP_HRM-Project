@@ -103,10 +103,45 @@ This project is a web-based **Human Resources Management System (HRMS)** built u
 
 - Displays key metrics and summaries.
 
-## Leave Management
+## Leave Management System
 
-- Employees can request and manage leave.
-- Approval system for HR and managers.
+### Leave Dashboard - Employee
+
+- The dashboard displays all leave balances along with details of all leaves taken.
+- Employees can edit leave requests before they are approved by the manager. Once approved, the edit button is disabled.
+- Employees cannot delete leave requests. They can request deletion from their reporting manager, admin, or HR department.
+
+### Apply Leave
+
+- By clicking the "Apply Leave" button on the dashboard, the employee is directed to an apply leave form.
+- **Select Leave**: A dropdown with three options: PL (Privilege Leave), CL (Casual Leave), and SL (Sick Leave).
+- After applying for leave, the user is directed back to their dashboard where the applied leave is visible with a default status of "Pending".
+- The applied leave is also visible on the reporting manager's dashboard for approval or rejection.
+
+### Update Leave
+
+- Employees can update the leave status before it is approved or rejected by the reporting manager.
+- Employees cannot edit the leave after it has been approved or rejected.
+- After updating the leave status, the user is directed back to the dashboard.
+
+### Leave Dashboard - Admin/Manager
+
+- The admin or manager dashboard contains two sections: "Manager/Admin Leave" and "Reportees' Leaves".
+- Managers or admins can approve or reject leave requests by clicking the edit button in the "Reportees' Leaves" section.
+- After clicking the edit button, a form opens where the manager or admin can approve or reject the leave.
+
+### Leave Balance
+
+- Leave balance is updated according to the leaves consumed by the user.
+
+### Leave Quota Functionality
+
+- Leave quotas for SL, PL, and CL are updated by HR department managers and admins.
+- The "Add Leave Quota" button is visible to HR managers and admins.
+- Clicking the "Add Leave Quota" button directs the user to a dashboard with a form to add leave quotas for the year for a selected employee from the dropdown.
+- The dropdown contains a list of employees.
+- Edit functionality is provided to update leave quotas for a particular employee.
+- Pagination is used to display a limited number of employees per page.
 
 ## Project Structure
 

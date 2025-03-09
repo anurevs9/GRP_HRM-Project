@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}
+{% if leave.employee == request.user.employee %}Update Leave Status{% else %}Approve/Reject Leave Request{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="background: linear-gradient(135deg, #e0f7fa 0%, #a3d8f4 100%); min-height: 100vh;">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0" style="animation: fadeIn 0.5s ease-in-out;">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">
+                        {% if leave.employee == request.user.employee %}
+                            Update Leave Status
+                        {% else %}
+                            Approve/Reject Leave Request
+                        {% endif %}
+                    </h2>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    <p class="text-muted mb-4">Review the leave request for <strong>{{ leave.employee.user.get_full_name }}</strong> ({{ leave.get_leave_type_display }}).</p>
+                    <form method="post" id="approveRejectForm">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-medium">Employee</label>
+                                <input type="text" class="form-control" value="{{ leave.employee.user.get_full_name }}" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-medium">Leave Type</label>
+                                <input type="text" class="form-control" value="{{ leave.get_leave_type_display }}" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-medium">Start Date</label>
+                                <input type="text" class="form-control" value="{{ leave.start_date|date }}" readonly>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-medium">End Date</label>
+                                <input type="text" class="form-control" value="{{ leave.end_date|date }}" readonly>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label fw-medium">Reason</label>
+                                <textarea class="form-control" readonly>{{ leave.reason }}</textarea>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-medium">Status</label>
+                                <select name="status" class="form-control" id="statusSelect" required>
+                                    <option value="" disabled selected>Select Status</option>
+                                    <option value="APPROVED">Approve</option>
+                                    <option value="REJECTED">Reject</option>
+                                    {% if leave.employee == request.user.employee %}
+                                        <option value="CANCELLED">Cancel</option>
+                                    {% endif %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-medium">Approved By</label>
+                                <input type="text" class="form-control" value="{{ request.user.get_full_name }}" readonly>
+                                <input type="hidden" name="approved_by" value="{{ request.user.id }}">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#confirmModal" onclick="setAction('approve')">Approve</button>
+                            <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#confirmModal" onclick="setAction('reject')">Reject</button>
+                            {% if leave.employee == request.user.employee %}
+                                <button type="button" class="btn btn-warning btn-lg" data-bs-toggle="modal" data-bs-target="#confirmModal" onclick="setAction('cancel')">Cancel Leave</button>
+                            {% endif %}
+                            <a href="{% url 'core:admin_leave_dashboard' %}" class="btn btn-secondary btn-lg">Back to Dashboard</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Confirmation Modal -->
+            <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header" id="modalHeader">
+                            <h5 class="modal-title" id="confirmModalLabel">Confirm Action</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center" id="modalBody">
+                            Are you sure you want to <span id="actionText" class="fw-bold"></span> this leave request?
+                        </div>
+                        <div class="modal-footer justify-content-center">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" form="approveRejectForm" class="btn" id="confirmButton">Yes, <span id="actionButtonText" class="fw-bold"></span></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .card {
+        border-radius: 15px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    .form-label {
+        font-weight: 500;
+    }
+    .form-control {
+        border-radius: 5px;
+        transition: border-color 0.3s ease;
+    }
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    .invalid-feedback {
+        font-size: 0.875rem;
+    }
+    .alert {
+        border-radius: 5px;
+    }
+    .text-muted {
+        color: #6c757d !important;
+    }
+    .modal-content {
+        border-radius: 10px;
+    }
+    .modal-header {
+        border-radius: 10px 10px 0 0;
+    }
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1.1rem;
+    }
+    .table-hover tbody tr:hover {
+        background-color: #e9ecef;
+        transition: background-color 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function setAction(action) {
+        const modalHeader = document.getElementById('modalHeader');
+        const actionText = document.getElementById('actionText');
+        const actionButtonText = document.getElementById('actionButtonText');
+        const confirmButton = document.getElementById('confirmButton');
+        const statusField = document.getElementById('statusSelect');
+
+        if (action === 'approve') {
+            modalHeader.classList.remove('bg-danger', 'bg-warning');
+            modalHeader.classList.add('bg-success');
+            confirmButton.classList.remove('btn-danger', 'btn-warning');
+            confirmButton.classList.add('btn-success');
+            actionText.textContent = 'approve';
+            actionButtonText.textContent = 'Approve';
+            statusField.value = 'APPROVED';
+        } else if (action === 'reject') {
+            modalHeader.classList.remove('bg-success', 'bg-warning');
+            modalHeader.classList.add('bg-danger');
+            confirmButton.classList.remove('btn-success', 'btn-warning');
+            confirmButton.classList.add('btn-danger');
+            actionText.textContent = 'reject';
+            actionButtonText.textContent = 'Reject';
+            statusField.value = 'REJECTED';
+        } else if (action === 'cancel') {
+            modalHeader.classList.remove('bg-success', 'bg-danger');
+            modalHeader.classList.add('bg-warning');
+            confirmButton.classList.remove('btn-success', 'btn-danger');
+            confirmButton.classList.add('btn-warning');
+            actionText.textContent = 'cancel';
+            actionButtonText.textContent = 'Cancel';
+            statusField.value = 'CANCELLED';
+        }
+        statusField.dispatchEvent(new Event('change'));
+    }
+</script>
+{% endblock %}

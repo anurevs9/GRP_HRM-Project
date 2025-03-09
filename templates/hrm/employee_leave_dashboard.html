@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}
+{% if user_role == 'TEAM_LEADER' %}
+Team Leader Leave Dashboard
+{% else %}
+Employee Leave Dashboard
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h1 class="mb-4 text-primary fw-bold">
+        {% if user_role == 'TEAM_LEADER' %}
+        Team Leader Leave Dashboard
+        {% else %}
+        Employee Leave Dashboard
+        {% endif %}
+    </h1>
+
+    <!-- Leave Balances -->
+    <div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
+        <div class="col mb-3">
+            <div class="card bg-danger text-white h-100 shadow-sm border-0">
+                <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                    <h5 class="card-title mb-0">PL</h5>
+                    <h3 class="display-6 fw-bold">{{ leave_balances.PL }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col mb-3">
+            <div class="card bg-success text-white h-100 shadow-sm border-0">
+                <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                    <h5 class="card-title mb-0">CL</h5>
+                    <h3 class="display-6 fw-bold">{{ leave_balances.CL }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col mb-3">
+            <div class="card bg-warning text-white h-100 shadow-sm border-0">
+                <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                    <h5 class="card-title mb-0">SL</h5>
+                    <h3 class="display-6 fw-bold">{{ leave_balances.SL }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Apply Leave Button -->
+    <div class="mb-4">
+        <div class="d-flex gap-2">
+            <a href="{% url 'core:apply_leave' %}" class="btn btn-primary btn-lg">Apply Leave</a>
+        </div>
+    </div>
+
+    <!-- Leave History Table -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">Leave History</h5>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Sr.No</th>
+                            <th>Leave Reason</th>
+                            <th>Leave Type</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Status</th>
+                            <th>Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leave_history %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ leave.reason }}</td>
+                            <td>{{ leave.get_leave_type_display }}</td>
+                            <td>{{ leave.start_date|date }}</td>
+                            <td>{{ leave.end_date|date }}</td>
+                            <td>{{ leave.get_status_display }}</td>
+                            <td>
+                                {% if leave.status == 'PENDING' %}
+                                    <a href="{% url 'core:edit_leave' leave.leaveid %}" class="btn btn-warning btn-sm">Edit</a>
+                                {% else %}
+                                    <button class="btn btn-secondary btn-sm" disabled>Edit</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No leave history found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if leave_history.has_other_pages %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if leave_history.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?page={{ leave_history.previous_page_number }}">Previous</a></li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                        {% endif %}
+                        {% for num in leave_history.paginator.page_range %}
+                            <li class="page-item {% if leave_history.number == num %}active{% endif %}">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endfor %}
+                        {% if leave_history.has_next %}
+                            <li class="page-item"><a class="page-link" href="?page={{ leave_history.next_page_number }}">Next</a></li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">Next</span></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border-radius: 10px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+    .table-hover tbody tr:hover {
+        background-color: #e9ecef;
+        transition: background-color 0.3s ease;
+    }
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    .text-muted {
+        color: #6c757d !important;
+    }
+    /* Custom card height for consistency */
+    .card-body {
+        min-height: 100px;
+    }
+    /* Ensure pagination links are visually appealing */
+    .pagination .page-link {
+        color: #007bff;
+    }
+    .pagination .page-link:hover {
+        background-color: #e9ecef;
+    }
+    .pagination .page-item.active .page-link {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+</style>
+{% endblock %}

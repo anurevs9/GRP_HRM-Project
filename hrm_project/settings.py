@@ -187,7 +187,7 @@ CACHES = {
         'KEY_PREFIX': 'hrm_project',  # Optional: Prefix for cache keys to avoid collisions
     }
 }
-PAYROLL_ADMIN_ROLES = ('ADMIN', 'MANAGER'),
+PAYROLL_ADMIN_ROLES = ['ADMIN', 'MANAGER'],
 MANAGER_ROLES = ['MANAGER', 'TEAM_LEADER'],
 PERFORMANCE_ROLE = ['ADMIN', 'MANAGER', 'TEAM_LEADER'],
 

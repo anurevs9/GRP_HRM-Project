@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Department, Role, Employee, Task, Leave, Performance,
-    Recruitment, Candidate, Training, Payroll, Attendance
+    Recruitment, Candidate, Training, Payroll, Attendance, LeaveQuota
 )
 
 @admin.register(Department)
@@ -62,6 +62,13 @@ class LeaveAdmin(admin.ModelAdmin):
     list_display = ('employee', 'leave_type', 'start_date', 'end_date', 'status')
     list_filter = ('leave_type', 'status')
     search_fields = ('employee__user__username', 'reason')
+
+# core/admin.py
+@admin.register(LeaveQuota)
+class LeaveQuotaAdmin(admin.ModelAdmin):
+    list_display = ('quotaid', 'employee', 'leave_type', 'total_quota', 'used_quota', 'remain_quota')
+    list_filter = ('leave_type',)
+    search_fields = ('employee__user__username',)
 
 @admin.register(Performance)
 class PerformanceAdmin(admin.ModelAdmin):

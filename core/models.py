@@ -90,28 +90,65 @@ class TaskAssignment(models.Model):
             self.completed_at = timezone.now()
         super().save(*args, **kwargs)
 
+
 class Leave(models.Model):
-    LEAVE_TYPES = (
-        ('SICK', 'Sick Leave'),
-        ('CASUAL', 'Casual Leave'),
-        ('EMERGENCY', 'Emergency Leave'),
-        ('VACATION', 'Vacation'),
-    )
-    STATUS_CHOICES = (
+    leaveid = models.AutoField(primary_key=True)
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, db_column='employeeid', related_name='leaves')
+    leave_type = models.CharField(max_length=20, choices=[
+        ('SL', 'Sick Leave'),
+        ('CL', 'Casual Leave'),
+        ('PL', 'Privileged Leave'),
+        ('LWP', 'Leave Without Pay'),
+    ], default='SL')
+    reason = models.CharField(max_length=200)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    total_days = models.IntegerField(default=0)
+    status = models.CharField(max_length=20, choices=[
         ('PENDING', 'Pending'),
         ('APPROVED', 'Approved'),
         ('REJECTED', 'Rejected'),
-    )
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
-    leave_type = models.CharField(max_length=20, choices=LEAVE_TYPES)
-    start_date = models.DateField()
-    end_date = models.DateField()
-    reason = models.TextField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
-    applied_on = models.DateTimeField(auto_now_add=True)
+    ], default='PENDING')
+    approved_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_leaves')
+    created_at = models.DateTimeField(auto_now_add=True)  # New field to track when leave was applied
 
     def __str__(self):
-        return f"{self.employee} - {self.leave_type}"
+        return f"Leave {self.leaveid} - {self.employee}"
+
+    def save(self, *args, **kwargs):
+        if self.start_date and self.end_date:
+            delta = self.end_date - self.start_date
+            self.total_days = delta.days + 1
+        super().save(*args, **kwargs)
+
+# core/models.py
+class LeaveQuota(models.Model):
+    quotaid = models.AutoField(primary_key=True)
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, db_column='employeeid', related_name='leave_quotas')
+    leave_type = models.CharField(max_length=20, choices=[
+        ('SL', 'Sick Leave'),
+        ('CL', 'Casual Leave'),
+        ('PL', 'Privileged Leave'),
+        ('LWP', 'Leave Without Pay'),
+    ], default='SL')
+    total_quota = models.IntegerField(default=0)
+    used_quota = models.IntegerField(default=0)
+    remain_quota = models.IntegerField(default=0)
+    status = models.CharField(max_length=20, choices=[
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    ], default='PENDING')  # New field
+
+    def __str__(self):
+        return f"Quota {self.quotaid} - {self.employee}"
+
+    def save(self, *args, **kwargs):
+        self.remain_quota = self.total_quota - self.used_quota
+        if self.remain_quota < 0:
+            raise ValueError("Used quota cannot exceed total quota.")
+        super().save(*args, **kwargs)
+
 
 # Define a default function for review_date
 def get_default_review_date():
