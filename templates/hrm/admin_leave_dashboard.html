@@ -90,14 +90,16 @@ Manager Leave Dashboard
                             <td>{{ leave.end_date|date }}</td>
                             <td>{{ leave.get_status_display }}</td>
                             <td>
-                            {% if leave.status == 'PENDING' %}
-                                <a href="{% url 'core:approve_reject_leave' leave.leaveid %}" class="btn btn-primary btn-sm me-1">Approve/Reject</a>
-                                <a href="{% url 'core:delete_leave' leave.leaveid %}" class="btn btn-danger btn-sm">Delete</a>
-                            {% else %}
-                                <button class="btn btn-secondary btn-sm me-1" disabled>Approve/Reject</button>
-                                <a href="{% url 'core:delete_leave' leave.leaveid %}" class="btn btn-danger btn-sm">Delete</a>
-                            {% endif %}
-                        </td>
+                                {% if leave.status == 'PENDING' %}
+                                    <a href="{% url 'core:edit_leave' leave.leaveid %}" class="btn btn-warning btn-sm me-1">Edit</a>
+                                    <a href="{% url 'core:approve_reject_leave' leave.leaveid %}" class="btn btn-primary btn-sm me-1">Approve/Reject</a>
+                                    <a href="{% url 'core:delete_leave' leave.leaveid %}" class="btn btn-danger btn-sm">Delete</a>
+                                {% else %}
+                                    <button class="btn btn-secondary btn-sm me-1" disabled>Edit</button>
+                                    <button class="btn btn-secondary btn-sm me-1" disabled>Approve/Reject</button>
+                                    <a href="{% url 'core:delete_leave' leave.leaveid %}" class="btn btn-danger btn-sm">Delete</a>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
@@ -161,15 +163,15 @@ Manager Leave Dashboard
                             <td>{{ leave.start_date|date }}</td>
                             <td>{{ leave.end_date|date }}</td>
                             <td>{{ leave.get_status_display }}</td>
-                          <td>
-                            {% if leave.status == 'PENDING' %}
-                                <a href="{% url 'core:approve_reject_leave' leave.leaveid %}" class="btn btn-primary btn-sm me-1">Approve/Reject</a>
-                                <a href="{% url 'core:delete_leave' leave.leaveid %}" class="btn btn-danger btn-sm">Delete</a>
-                            {% else %}
-                                <button class="btn btn-secondary btn-sm me-1" disabled>Approve/Reject</button>
-                                <a href="{% url 'core:delete_leave' leave.leaveid %}" class="btn btn-danger btn-sm">Delete</a>
-                            {% endif %}
-                        </td>
+                            <td>
+                                {% if leave.status == 'PENDING' %}
+                                    <a href="{% url 'core:approve_reject_leave' leave.leaveid %}" class="btn btn-primary btn-sm me-1">Approve/Reject</a>
+                                    <a href="{% url 'core:delete_leave' leave.leaveid %}" class="btn btn-danger btn-sm">Delete</a>
+                                {% else %}
+                                    <button class="btn btn-secondary btn-sm me-1" disabled>Approve/Reject</button>
+                                    <a href="{% url 'core:delete_leave' leave.leaveid %}" class="btn btn-danger btn-sm">Delete</a>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>

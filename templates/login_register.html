@@ -168,7 +168,7 @@
                 {% for message in messages %}
                     messages.push({
                         text: "{{ message|escapejs }}",
-                        type: "{{ message.tags|escapejs }}"
+                        type: "{{ message.tags|escapejs }}",
                     });
                 {% endfor %}
 
